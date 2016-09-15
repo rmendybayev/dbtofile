@@ -1,0 +1,34 @@
+tables:
+  -   &employee
+      url: jdbc:mysql://<mysql.host>:3306/employees
+      table: employees
+      user: foouser
+      password: ***
+      outputPath: target/employee.parquet
+      outputFormat: parquet
+      load: false
+  -   &title
+      <<: *employee
+      table: titles
+      outputPath: target/titles.parquet
+  -   &salarie
+      <<: *employee
+      table: salaries
+      outputPath: target/salaries.parquet
+  -   &joinedEmployee
+      table: joinedEmployee
+      outputPath: target/joinedEmployee.parquet
+      outputFormat: parquet
+joins:
+   -
+    outputTable: *joinedEmployee
+    base:
+      table: *employee
+      joinKey: emp_no
+    children:
+      -
+        table: *title
+        joinKey: emp_no
+      -
+        table: *salarie
+        joinKey: emp_no
