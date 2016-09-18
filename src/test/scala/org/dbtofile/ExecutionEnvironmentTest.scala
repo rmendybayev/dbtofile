@@ -22,24 +22,54 @@ package org.dbtofile
 
 import java.sql.DriverManager
 
-import org.scalatest.{FunSuite, Matchers, Tag}
+import org.scalatest.Tag
 
-class ExecutionEnvironmentTest extends FunSuite with DdToFileTestSuite with Matchers {
+class ExecutionEnvironmentTest extends DdToFileSuite {
 
-  test("create and populate embedded Db", Tag("slow")) {
-    val port: Int = 32769
-    val user: String = "db_user"
-    val pass: String = "pass"
-    withMySql(port, user, pass, getClass.getResource("/employees_db.sql.zip").getFile) {
-      val conn = DriverManager.getConnection(s"jdbc:mysql://localhost:$port/employees", user, pass)
 
-      val stmt = conn.createStatement()
-      val rs = stmt.executeQuery("SELECT COUNT(*) AS total FROM employees.employees")
-      rs.next()
-      val count = rs.getInt("total")
+  test("check test environment initialization", Tag("slow")) {
 
-      count should be(300024)
-      conn.close()
+    withEmployeesDb() {
+      val conn = DriverManager.getConnection(s"jdbc:mysql://localhost:$dbPort/$employeesDb", dbUser, dbPass)
+      try {
+        val metadata = conn.getMetaData
+
+        val catalog: String = conn.getCatalog
+        val schemaPattern: String = "employees"
+        val tableNamePattern: String = null
+        val types: Array[String] = null
+
+        val tablesRs = metadata.getTables(catalog, schemaPattern, tableNamePattern, types)
+
+
+
+        val tables = (for ((_, r) <- Iterator.continually((tablesRs.next(), tablesRs)).takeWhile(_._1)) yield {
+          r.getString(3)
+        }).toList
+
+
+        tables.sorted should be(List("current_dept_emp", "departments", "dept_emp", "dept_emp_latest_date", "dept_manager", "employees", "salaries", "titles"))
+
+
+        tables.foreach(table => {
+          println(s"TABLE : $table")
+          val foreignKeys = metadata.getImportedKeys(catalog, "employees", table)
+          while (foreignKeys.next()) {
+            val fkTableName = foreignKeys.getString("FKTABLE_NAME")
+            val fkColumnName = foreignKeys.getString("FKCOLUMN_NAME")
+            val pkTableName = foreignKeys.getString("PKTABLE_NAME")
+            val pkColumnName = foreignKeys.getString("PKCOLUMN_NAME")
+            println(fkTableName + "." + fkColumnName + " -> " + pkTableName + "." + pkColumnName)
+          }
+        })
+
+        val stmt = conn.createStatement()
+        val rs = stmt.executeQuery("SELECT COUNT(*) AS total FROM employees.employees")
+        rs.next()
+        rs.getInt("total") should be(300024)
+      } finally {
+        conn.close()
+      }
 
     }
   }
