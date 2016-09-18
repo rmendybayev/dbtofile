@@ -19,7 +19,7 @@ package org.dbtofile
 
 import java.io.{File, FileInputStream}
 
-import org.apache.spark.sql.SaveMode
+import org.apache.spark.sql.{DataFrame, SaveMode}
 import org.apache.spark.{SparkConf, SparkContext}
 import org.dbtofile.conf.TableList
 import org.dbtofile.join.DataSourceMerger
@@ -46,12 +46,12 @@ object TableImport {
       case Some(config) =>
       // do stuff
 
-        var conf = new SparkConf
+        val conf = new SparkConf
 
-        var sc = new SparkContext("local[*]", "TableImport", conf)
+        val sc = new SparkContext("local[*]", "TableImport", conf)
         val sqlContext = new org.apache.spark.sql.SQLContext(sc)
 
-        val filename = "src/main/resources/tables_conf.yaml"
+//        val filename = "src/main/resources/tables_conf.yaml"
         val input = new FileInputStream(config.conf)
         val yaml = new Yaml(new Constructor(classOf[TableList]))
         val t = yaml.load(input).asInstanceOf[TableList]
@@ -61,7 +61,7 @@ object TableImport {
         }
 
         for (join <- t.joins) {
-          var df = DataSourceMerger.joinTable(join, sqlContext)
+          val df: DataFrame = DataSourceMerger.joinTable(join, sqlContext)
           df.write.mode(SaveMode.Overwrite).format(join.outputTable.outputFormat).save(join.outputTable.outputPath)
         }
 
