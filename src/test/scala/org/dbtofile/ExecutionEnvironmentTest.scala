@@ -20,8 +20,6 @@
 package org.dbtofile
 
 
-import java.sql.DriverManager
-
 import org.scalatest.Tag
 
 class ExecutionEnvironmentTest extends DdToFileSuite {
@@ -30,30 +28,24 @@ class ExecutionEnvironmentTest extends DdToFileSuite {
   test("check test environment initialization", Tag("slow")) {
 
     withEmployeesDb() {
-      val conn = DriverManager.getConnection(s"jdbc:mysql://localhost:$dbPort/$employeesDb", dbUser, dbPass)
+      val conn = db.jdbcConnection(Some("employees"))
       try {
         val metadata = conn.getMetaData
 
         val catalog: String = conn.getCatalog
-        val schemaPattern: String = "employees"
+        val schemaPattern: String = null
         val tableNamePattern: String = null
         val types: Array[String] = null
 
         val tablesRs = metadata.getTables(catalog, schemaPattern, tableNamePattern, types)
 
-
-
         val tables = (for ((_, r) <- Iterator.continually((tablesRs.next(), tablesRs)).takeWhile(_._1)) yield {
-          r.getString(3)
-        }).toList
-
-
-        tables.sorted should be(List("current_dept_emp", "departments", "dept_emp", "dept_emp_latest_date", "dept_manager", "employees", "salaries", "titles"))
-
+          (r.getString(2),r.getString(3))
+        }).toList.filter(_._1 == "public").map(_._2)
 
         tables.foreach(table => {
           println(s"TABLE : $table")
-          val foreignKeys = metadata.getImportedKeys(catalog, "employees", table)
+          val foreignKeys = metadata.getImportedKeys(catalog, null, table)
           while (foreignKeys.next()) {
             val fkTableName = foreignKeys.getString("FKTABLE_NAME")
             val fkColumnName = foreignKeys.getString("FKCOLUMN_NAME")
@@ -64,7 +56,7 @@ class ExecutionEnvironmentTest extends DdToFileSuite {
         })
 
         val stmt = conn.createStatement()
-        val rs = stmt.executeQuery("SELECT COUNT(*) AS total FROM employees.employees")
+        val rs = stmt.executeQuery("SELECT COUNT(*) AS total FROM employees")
         rs.next()
         rs.getInt("total") should be(300024)
       } finally {
