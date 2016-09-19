@@ -20,7 +20,7 @@ package org.dbtofile.merge
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.catalyst.ScalaReflectionLock
 import org.apache.spark.sql.types._
-import org.apache.spark.sql.{DataFrame, Row, SQLContext}
+import org.apache.spark.sql.{DataFrame, Row, SQLContext, SparkSession}
 import org.dbtofile.conf.MergeInfo
 
 import scala.collection.mutable
@@ -53,7 +53,8 @@ object DataSourceMerger {
 
   }
 
-  def mergeTable(joinInfo:MergeInfo, sqlContext: SQLContext): DataFrame = {
+
+  def mergeTable(joinInfo:MergeInfo, sqlContext: SparkSession): DataFrame = {
     var base = sqlContext.read.load(joinInfo.base.table.outputPath)
 
     var childrens = joinInfo.children.map {
@@ -73,7 +74,7 @@ object DataSourceMerger {
             StructField(info.table.table, ArrayType(df.schema,false))
           )
         )
-       val childRDD =  df.flatMap[(Any, Row)] {
+       val childRDD = df.rdd.flatMap {
           r:Row =>
             var value = sfTypeToScalaType(baseMergeType, r.get(indx));
             if (value.isSuccess) {
@@ -82,7 +83,7 @@ object DataSourceMerger {
               Seq.empty
             }
         }.groupByKey.map[Row] {
-          case ((key: Any, value: Seq[Row])) => Row(key, value)
+          case ((key, value)) => Row(key, value)
         }
         sqlContext.createDataFrame(childRDD, schema)
     }

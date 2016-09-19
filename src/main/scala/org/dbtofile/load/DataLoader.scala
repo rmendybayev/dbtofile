@@ -17,7 +17,7 @@
 
 package org.dbtofile.load
 
-import org.apache.spark.sql.{SQLContext, SaveMode}
+import org.apache.spark.sql.{SQLContext, SaveMode, SparkSession}
 import org.dbtofile.conf.TableInfo
 
 
@@ -26,7 +26,7 @@ import org.dbtofile.conf.TableInfo
   */
 object DataLoader {
 
-    def loadDataFromMySQL(dbInfo: TableInfo, sqlContext: SQLContext,
+    def loadDataFromMySQL(dbInfo: TableInfo, sqlContext: SparkSession,
                           outputPath: String = null, outputFormat:String = null ) {
 
       if (!dbInfo.load) {
@@ -38,7 +38,7 @@ object DataLoader {
         .option("user", dbInfo.user)
         .option("password", dbInfo.password)
         .load()
-      table.registerTempTable(dbInfo.table)
+      table.createOrReplaceTempView(dbInfo.table)
 
       table.write.mode(SaveMode.Append)
                 .format(Option(outputFormat).getOrElse(dbInfo.outputFormat))
