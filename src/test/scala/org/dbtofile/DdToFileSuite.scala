@@ -31,7 +31,7 @@ trait DdToFileSuite extends FunSuite with Matchers with BeforeAndAfterAll {
       port = port,
       user = user,
       password = password,
-      initScript = getClass.getResource("/employees_db.sql").getFile,
+      initScript = getClass.getResource("/employees_db.sql.zip").getFile,
       dbName = employeesDb) _
 }
 
