@@ -17,7 +17,7 @@
 
 package org.dbtofile.load
 
-import org.apache.spark.sql.{SQLContext, SaveMode, SparkSession}
+import org.apache.spark.sql.{SaveMode, SparkSession}
 import org.dbtofile.conf.TableInfo
 
 

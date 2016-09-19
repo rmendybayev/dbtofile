@@ -19,11 +19,10 @@ package org.dbtofile
 
 import java.io.{File, FileInputStream}
 
-import org.apache.spark.sql.{DataFrame, SaveMode, SparkSession}
-import org.apache.spark.{SparkConf, SparkContext}
+import org.apache.spark.sql.{SaveMode, SparkSession}
 import org.dbtofile.conf.TableList
-import org.dbtofile.merge.DataSourceMerger
 import org.dbtofile.load.DataLoader
+import org.dbtofile.merge.DataSourceMerger
 import org.yaml.snakeyaml.Yaml
 import org.yaml.snakeyaml.constructor.Constructor
 
