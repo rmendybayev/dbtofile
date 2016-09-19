@@ -15,20 +15,32 @@ tables:
       <<: *employee
       table: salaries
       outputPath: target/salaries.parquet
-  -   &joinedEmployee
-      table: joinedEmployee
-      outputPath: target/joinedEmployee.parquet
+  -   &departments
+      <<: *employee
+      table: departments
+      outputPath: target/departments.parquet
+  -   &dept_emp
+      <<: *employee
+      table: dept_emp
+      outputPath: target/dept_emp.parquet
+  -   &dept_manager
+      <<: *employee
+      table: dept_manager
+      outputPath: target/dept_manager.parquet
+  -   &mergedEmployee
+      table: merged_employee
+      outputPath: target/merged_employee.parquet
       outputFormat: parquet
-joins:
+merges:
    -
-    outputTable: *joinedEmployee
+    outputTable: *mergedEmployee
     base:
       table: *employee
-      joinKey: emp_no
+      mergeKey: emp_no
     children:
       -
         table: *title
-        joinKey: emp_no
+        mergeKey: emp_no
       -
         table: *salarie
-        joinKey: emp_no
+        mergeKey: emp_no

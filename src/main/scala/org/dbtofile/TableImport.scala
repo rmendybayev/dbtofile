@@ -22,7 +22,7 @@ import java.io.{File, FileInputStream}
 import org.apache.spark.sql.SaveMode
 import org.apache.spark.{SparkConf, SparkContext}
 import org.dbtofile.conf.TableList
-import org.dbtofile.join.DataSourceMerger
+import org.dbtofile.merge.DataSourceMerger
 import org.dbtofile.load.DataLoader
 import org.yaml.snakeyaml.Yaml
 import org.yaml.snakeyaml.constructor.Constructor
@@ -60,9 +60,10 @@ object TableImport {
           DataLoader.loadDataFromMySQL(table, sqlContext)
         }
 
-        for (join <- t.joins) {
-          var df = DataSourceMerger.joinTable(join, sqlContext)
-          df.write.mode(SaveMode.Overwrite).format(join.outputTable.outputFormat).save(join.outputTable.outputPath)
+        for (merge <- t.merges) {
+          var df = DataSourceMerger.mergeTable(merge, sqlContext)
+          //df.head(10)
+          df.write.mode(SaveMode.Overwrite).format(merge.outputTable.outputFormat).save(merge.outputTable.outputPath)
         }
 
       case None =>

@@ -32,7 +32,7 @@ import scala.beans.BeanProperty
 
 case class TableList(
   @BeanProperty var tables: Array[TableInfo] = Array.empty[TableInfo],
-  @BeanProperty var joins: Array[JoinInfo] = Array.empty[JoinInfo]) {
+  @BeanProperty var merges: Array[MergeInfo] = Array.empty[MergeInfo]) {
   def this() = {
     this(Array.empty[TableInfo], null)
   }
@@ -58,18 +58,18 @@ case class TableInfo (
     }
 }
 
-case class JoinInfo (
-   @BeanProperty var base: JoinTableInfo,
-   @BeanProperty var outputTable: TableInfo,
-@BeanProperty var children: Array[JoinTableInfo] = Array.empty[JoinTableInfo]) {
+case class MergeInfo(
+                      @BeanProperty var base: MergeTableInfo,
+                      @BeanProperty var outputTable: TableInfo,
+                      @BeanProperty var children: Array[MergeTableInfo] = Array.empty[MergeTableInfo]) {
   def this() = {
-    this(null, null, Array.empty[JoinTableInfo])
+    this(null, null, Array.empty[MergeTableInfo])
   }
 }
 
-case class JoinTableInfo (
+case class MergeTableInfo(
     @BeanProperty var table: TableInfo,
-    @BeanProperty var joinKey: String) {
+    @BeanProperty var mergeKey: String) {
 
   def this() = {
     this(null,"")
