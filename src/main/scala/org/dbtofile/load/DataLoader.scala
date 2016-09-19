@@ -40,9 +40,6 @@ object DataLoader {
         .load()
       table.registerTempTable(dbInfo.table)
 
-      if (Some(dbInfo.sql).isDefined) {
-        table = sqlContext.sql(dbInfo.sql)
-      }
       table.write.mode(SaveMode.Append)
                 .format(Option(outputFormat).getOrElse(dbInfo.outputFormat))
                 .save(Option(outputFormat).getOrElse(dbInfo.outputPath))
