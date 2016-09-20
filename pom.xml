@@ -118,6 +118,23 @@
             <version>2.0.1</version>
             <scope>test</scope>
         </dependency>
+        <!--<dependency>-->
+            <!--<groupId>mysql</groupId>-->
+            <!--<artifactId>mysql-connector-mxj</artifactId>-->
+            <!--&lt;!&ndash;-->
+            <!--Please note that development of MySQL Connector/MXJ has been discontinued.-->
+            <!--latest supported MySql version is 5.1.40-->
+            <!--&ndash;&gt;-->
+            <!--<version>5.0.12</version>-->
+            <!--<scope>test</scope>-->
+        <!--</dependency>-->
+
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <version>1.4.192</version>
+            <scope>test</scope>
+        </dependency>
 
     </dependencies>
 

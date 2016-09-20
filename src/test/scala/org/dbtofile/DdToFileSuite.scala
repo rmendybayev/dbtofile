@@ -1,6 +1,6 @@
 package org.dbtofile
 
-import org.dbtofile.helpers.MysqlOps
+import org.dbtofile.helpers.{EmbeddedH2, EmbeddedMySql}
 import org.scalatest.{BeforeAndAfterAll, FunSuite, Matchers}
 
 
@@ -10,24 +10,24 @@ trait DdToFileSuite extends FunSuite with Matchers with BeforeAndAfterAll {
   val dbPass: String = "pass"
   val employeesDb: String = "employees"
 
+  def  db = new EmbeddedH2
 
-  def withMySql(port: Int, user: String, password: String, initScript: String, dbName: String)(test: => Unit) = {
-    val db = MysqlOps.embeddedDb(port, user, password)
-    MysqlOps.createDatabase(db, dbName)
-    MysqlOps.importData(dbPort, dbUser, dbPass, initScript)
+  def withEmbeddedDb(port: Int, user: String, password: String, initScript: String, dbName: String)(test: => Unit) = {
+//    val db = new EmbeddedMySql(port = port, dbUser = user, password = password)
+
+    db.start
+    db.createDb(dbName)
+    db.importData(db = Option(dbName),dataScript = initScript)
     try {
       test
     } finally {
-      if (db != null) {
-        println("Embedded database server will be stopped")
-        db.stop()
-      }
+      println("Embedded database server will be stopped")
+      db.stop
     }
-
   }
 
   def withEmployeesDb(port: Int = dbPort, user: String = dbUser, password: String = dbPass) =
-    withMySql(
+    withEmbeddedDb(
       port = port,
       user = user,
       password = password,
