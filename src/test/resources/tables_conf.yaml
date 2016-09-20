@@ -3,7 +3,7 @@ tables:
       url: jdbc:mysql://<mysql.host>:3306/employees
       table: employees
       user: foouser
-      password: ***
+      password: SomeP@ssw0rd
       outputPath: target/employee.parquet
       outputFormat: parquet
       load: false

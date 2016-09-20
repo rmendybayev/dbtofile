@@ -12,7 +12,7 @@ trait DdToFileSuite extends FunSuite with Matchers with BeforeAndAfterAll {
 
   def  db = new EmbeddedH2
 
-  def withEmbeddedDb(port: Int, user: String, password: String, initScript: String, dbName: String)(test: => Unit) = {
+  def withEmbeddedDb(user: String, password: String, initScript: String, dbName: String)(test: => Unit) = {
 //    val db = new EmbeddedMySql(port = port, dbUser = user, password = password)
 
     db.start
@@ -26,9 +26,8 @@ trait DdToFileSuite extends FunSuite with Matchers with BeforeAndAfterAll {
     }
   }
 
-  def withEmployeesDb(port: Int = dbPort, user: String = dbUser, password: String = dbPass) =
+  def withEmployeesDb(user: String = dbUser, password: String = dbPass) =
     withEmbeddedDb(
-      port = port,
       user = user,
       password = password,
       initScript = getClass.getResource("/employees_db.sql.zip").getFile,

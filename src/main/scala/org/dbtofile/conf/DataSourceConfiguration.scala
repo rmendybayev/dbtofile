@@ -76,7 +76,7 @@ case class MergeTableInfo(
   }
 }
 
-
+//todo extract
 object Configuration {
   def loadConfigurationFromYaml( file : File): TableList = {
     val input = new FileInputStream(file)

@@ -40,7 +40,7 @@ class ExecutionEnvironmentTest extends DdToFileSuite {
         val tablesRs = metadata.getTables(catalog, schemaPattern, tableNamePattern, types)
 
         val tables = (for ((_, r) <- Iterator.continually((tablesRs.next(), tablesRs)).takeWhile(_._1)) yield {
-          (r.getString(2),r.getString(3))
+          (r.getString(2), r.getString(3))
         }).toList.filter(_._1 == "public").map(_._2)
 
         tables.foreach(table => {
