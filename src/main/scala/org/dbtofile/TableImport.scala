@@ -19,11 +19,10 @@ package org.dbtofile
 
 import java.io.{File, FileInputStream}
 
-import org.apache.spark.sql.SaveMode
-import org.apache.spark.{SparkConf, SparkContext}
+import org.apache.spark.sql.{SaveMode, SparkSession}
 import org.dbtofile.conf.TableList
-import org.dbtofile.merge.DataSourceMerger
 import org.dbtofile.load.DataLoader
+import org.dbtofile.merge.DataSourceMerger
 import org.yaml.snakeyaml.Yaml
 import org.yaml.snakeyaml.constructor.Constructor
 
@@ -46,22 +45,28 @@ object TableImport {
       case Some(config) =>
       // do stuff
 
-        var conf = new SparkConf
+        //val conf = new SparkConf
 
-        var sc = new SparkContext("local[*]", "TableImport", conf)
-        val sqlContext = new org.apache.spark.sql.SQLContext(sc)
+        //val sc = new SparkContext("local[*]", "TableImport", conf)
+        val spark = SparkSession
+          .builder()
+          .master("local[*]")
+          .appName("TableImport")
+          .getOrCreate()
 
-        val filename = "src/main/resources/tables_conf.yaml"
+
+//        val filename = "src/main/resources/tables_conf.yaml"
         val input = new FileInputStream(config.conf)
         val yaml = new Yaml(new Constructor(classOf[TableList]))
         val t = yaml.load(input).asInstanceOf[TableList]
 
         for (table <- t.tables) {
-          DataLoader.loadDataFromMySQL(table, sqlContext)
+          DataLoader.loadDataFromMySQL(table, spark)
         }
 
+
         for (merge <- t.merges) {
-          var df = DataSourceMerger.mergeTable(merge, sqlContext)
+          var df = DataSourceMerger.mergeTable(merge, spark)
           //df.head(10)
           df.write.mode(SaveMode.Overwrite).format(merge.outputTable.outputFormat).save(merge.outputTable.outputPath)
         }
