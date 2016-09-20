@@ -17,17 +17,11 @@
 
 package org.dbtofile.merge
 
-import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.catalyst.ScalaReflectionLock
 import org.apache.spark.sql.types._
-import org.apache.spark.sql.{DataFrame, Row, SQLContext}
+import org.apache.spark.sql.{DataFrame, Row, SparkSession}
 import org.dbtofile.conf.MergeInfo
 
-import scala.collection.mutable
 import scala.util.Try
-import scala.math.{Integral, Numeric, Ordering}
-import scala.reflect.runtime.universe.typeTag
-import org.apache.spark.sql.catalyst.ScalaReflectionLock
 
 
 
@@ -37,23 +31,17 @@ import org.apache.spark.sql.catalyst.ScalaReflectionLock
   */
 object DataSourceMerger {
 
-
-  class Converter {
-
-  }
-
   def sfTypeToScalaType(dataType: DataType, value:Any) : Try[Any] = dataType match {
-
     case DataTypes.IntegerType => Try(value.asInstanceOf[Number])
     case DataTypes.StringType => Try(value.asInstanceOf[String])
     case DataTypes.ShortType=> Try(value.asInstanceOf[Number])
     case DataTypes.LongType => Try(value.asInstanceOf[Number])
     case DataTypes.FloatType => Try(value.asInstanceOf[Number])
     case DataTypes.DoubleType => Try(value.asInstanceOf[Number])
-
   }
 
-  def mergeTable(joinInfo:MergeInfo, sqlContext: SQLContext): DataFrame = {
+
+  def mergeTable(joinInfo:MergeInfo, sqlContext: SparkSession): DataFrame = {
     var base = sqlContext.read.load(joinInfo.base.table.outputPath)
 
     var childrens = joinInfo.children.map {
@@ -61,7 +49,6 @@ object DataSourceMerger {
     }
 
     val baseMergeType = base.schema.apply(joinInfo.base.mergeKey).dataType
-    import sqlContext.implicits._
 
     val grouppedChildByKey = childrens.map {
 
@@ -73,7 +60,7 @@ object DataSourceMerger {
             StructField(info.table.table, ArrayType(df.schema,false))
           )
         )
-       val childRDD =  df.flatMap[(Any, Row)] {
+       val childRDD = df.rdd.flatMap {
           r:Row =>
             var value = sfTypeToScalaType(baseMergeType, r.get(indx));
             if (value.isSuccess) {
@@ -82,7 +69,7 @@ object DataSourceMerger {
               Seq.empty
             }
         }.groupByKey.map[Row] {
-          case ((key: Any, value: Seq[Row])) => Row(key, value)
+          case ((key, value)) => Row(key, value)
         }
         sqlContext.createDataFrame(childRDD, schema)
     }
