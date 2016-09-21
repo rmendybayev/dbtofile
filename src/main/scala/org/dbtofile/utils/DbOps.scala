@@ -29,9 +29,9 @@ object DbOps {
   def listTables(metadata: DatabaseMetaData) = {
 
     val catalog: String = metadata.getConnection.getCatalog
-    val schemaPattern: String = null
-    val tableNamePattern: String = null
-    val types: Array[String] = null
+    val schemaPattern: String = "public"
+    val tableNamePattern: String = "%"
+    val types: Array[String] = Array("TABLE")
 
     val tablesRs = metadata.getTables(catalog, schemaPattern, tableNamePattern, types)
     (for ((_, r) <- Iterator.continually((tablesRs.next(), tablesRs)).takeWhile(_._1)) yield {

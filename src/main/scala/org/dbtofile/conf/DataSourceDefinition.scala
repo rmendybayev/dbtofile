@@ -76,9 +76,4 @@ object DataSourceDefinition {
 
 
   }
-
-  def main(args: Array[String]): Unit = {
-    val db = load("jdbc:mysql://192.168.99.100:32783/employees", "root", "root")
-    println(YamlOps.toString(db))
-  }
 }

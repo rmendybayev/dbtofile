@@ -33,7 +33,7 @@ class DataSourceDefinitionTest extends DdToFileSuite {
   test("load data source definitions from table metadata", Tag("slow")) {
     withEmployeesDb() {
       val ds: Db = DataSourceDefinition.load(db.connectionString(Some("employees")), "sa", "")
-      require(ds.tables.length == 37) //H2 creates a lot of service tables
+      require(ds.tables.length == 6) //H2 creates a lot of service tables
       val childList = ds.childTables("employees").map(_.name)
       require(childList.size == 4)
       import org.dbtofile.conf.ListItemOps._
