@@ -23,12 +23,20 @@ import org.yaml.snakeyaml.DumperOptions.FlowStyle
 import org.yaml.snakeyaml.{DumperOptions, Yaml}
 import org.yaml.snakeyaml.introspector.BeanAccess
 import org.yaml.snakeyaml.nodes.Tag
+import org.yaml.snakeyaml.representer.Representer
 
 object YamlOps {
   def toString(entity: Any) = {
     val options = new DumperOptions
-    val yaml = new Yaml(options)
+    options.setDefaultFlowStyle(FlowStyle.BLOCK)
+    options.setExplicitStart(false)
+
+    val representer = new Representer()
+    representer.addClassTag(entity.getClass, Tag.MAP);
+
+    val yaml = new Yaml(representer, options)
+
     yaml.setBeanAccess(BeanAccess.FIELD)
-    yaml.dumpAs(entity, new Tag(entity.getClass.getName), FlowStyle.BLOCK)
+    yaml.dump(entity)
   }
 }
