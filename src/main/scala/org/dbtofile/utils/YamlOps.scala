@@ -26,13 +26,13 @@ import org.yaml.snakeyaml.nodes.Tag
 import org.yaml.snakeyaml.representer.Representer
 
 object YamlOps {
-  def toString(entity: Any) = {
+  def toString [T] (entity: T) = {
     val options = new DumperOptions
     options.setDefaultFlowStyle(FlowStyle.BLOCK)
     options.setExplicitStart(false)
 
     val representer = new Representer()
-    representer.addClassTag(entity.getClass, Tag.MAP);
+    representer.addClassTag(entity.getClass, Tag.MAP)
 
     val yaml = new Yaml(representer, options)
 
