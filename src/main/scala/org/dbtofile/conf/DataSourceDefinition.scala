@@ -29,6 +29,11 @@ case class Db(@BeanProperty dbName: String,
               @BeanProperty tables: Array[DbTable],
               @BeanProperty relations: Array[Relation]) {
 
+  /**
+    * List tables that can be joined to specified table
+    * @param table
+    * @return
+    */
   def childTables(table: DbTable): Array[DbTable] = childTables(table.name)
 
   def childTables(tableName: String): Array[DbTable] = relations
