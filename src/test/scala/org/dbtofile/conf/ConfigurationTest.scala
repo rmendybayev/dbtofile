@@ -3,9 +3,6 @@ package org.dbtofile.conf
 import java.io.File
 
 import org.dbtofile.DdToFileSuite
-import org.scalatest.Tag
-
-import scala.collection.mutable.ArrayBuffer
 
 class ConfigurationTest extends DdToFileSuite {
 
@@ -29,65 +26,6 @@ class ConfigurationTest extends DdToFileSuite {
 
     val merge = conf.merges.head
     merge.outputTable.outputPath should be("target/merged_employee.parquet")
-  }
-
-  ignore("load configuration from table metadata", Tag("slow")) {
-    val connectionString = db.connectionString(Some("employees"))
-    val user = "sa"
-    val password = ""
-    withEmployeesDb() {
-      val conn = db.jdbcConnection(Some("employees"))
-      try {
-        val metadata = conn.getMetaData
-        val catalog: String = conn.getCatalog
-        val schemaPattern: String = null
-        val tableNamePattern: String = null
-        val types: Array[String] = null
-
-        val tablesRs = metadata.getTables(catalog, schemaPattern, tableNamePattern, types)
-
-        val tables = (for ((_, r) <- Iterator.continually((tablesRs.next(), tablesRs)).takeWhile(_._1)) yield {
-          (r.getString(2), r.getString(3))
-        }).toList.filter(_._1 == "public").map(_._2)
-
-        val tableInfo: List[MergeInfo] = tables.flatMap(table => {
-          println(s"TABLE : $table")
-          val tInfo=TableInfo(
-            url=db.connectionString(Option(table)),
-            table = table,
-            password=password,
-            user = user,
-            outputPath = null,
-            outputFormat = null,
-            sql = null,
-            load = false)
-          val foreignKeys = metadata.getImportedKeys(catalog, null, table)
-          val mergeOps = ArrayBuffer[(MergeTableInfo,MergeTableInfo)]()
-          while (foreignKeys.next()) {
-            val base = MergeTableInfo(tInfo, foreignKeys.getString("PKCOLUMN_NAME"))
-            val childTInfo=TableInfo(
-              url=db.connectionString(Option( foreignKeys.getString("FKTABLE_NAME"))),
-              table =  foreignKeys.getString("FKTABLE_NAME"),
-              password=password,
-              user = user,
-              outputPath = null,
-              outputFormat = null,
-              sql = null,
-              load = false)
-
-            val child = MergeTableInfo(childTInfo, foreignKeys.getString("FKCOLUMN_NAME"))
-
-            mergeOps += ((base, child))
-          }
-          mergeOps.groupBy(_._1).map{case (baseTable, tablesToJoin)=> MergeInfo(baseTable, null, tablesToJoin.map(_._2).toArray)}
-        })
-
-
-      } finally {
-        if (conn != null) conn.close()
-      }
-
-    }
   }
 
 }
