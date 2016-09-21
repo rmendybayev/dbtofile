@@ -28,9 +28,12 @@ trait DdToFileSuite extends FunSuite with Matchers with BeforeAndAfterAll {
   val dbPass: String = "pass"
   val employeesDb: String = "employees"
 
+//  override def convertToLegacyEqualizer[T](left: T): LegacyEqualizer[T] = new LegacyEqualizer(left)
+//  override def convertToLegacyCheckingEqualizer[T](left: T): LegacyCheckingEqualizer[T] = new LegacyCheckingEqualizer(left)
+
   def  db = new EmbeddedH2
 
-  def withEmbeddedDb(port: Int, user: String, password: String, initScript: String, dbName: String)(test: => Unit) = {
+  def withEmbeddedDb(user: String, password: String, initScript: String, dbName: String)(test: => Unit) = {
 //    val db = new EmbeddedMySql(port = port, dbUser = user, password = password)
 
     db.start
@@ -44,9 +47,8 @@ trait DdToFileSuite extends FunSuite with Matchers with BeforeAndAfterAll {
     }
   }
 
-  def withEmployeesDb(port: Int = dbPort, user: String = dbUser, password: String = dbPass) =
+  def withEmployeesDb(user: String = dbUser, password: String = dbPass) =
     withEmbeddedDb(
-      port = port,
       user = user,
       password = password,
       initScript = getClass.getResource("/employees_db.sql.zip").getFile,
