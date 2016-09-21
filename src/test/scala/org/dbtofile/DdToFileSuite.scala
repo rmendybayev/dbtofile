@@ -28,6 +28,9 @@ trait DdToFileSuite extends FunSuite with Matchers with BeforeAndAfterAll {
   val dbPass: String = "pass"
   val employeesDb: String = "employees"
 
+  override def convertToLegacyEqualizer[T](left: T): LegacyEqualizer[T] = new LegacyEqualizer(left)
+  override def convertToLegacyCheckingEqualizer[T](left: T): LegacyCheckingEqualizer[T] = new LegacyCheckingEqualizer(left)
+
   def  db = new EmbeddedH2
 
   def withEmbeddedDb(user: String, password: String, initScript: String, dbName: String)(test: => Unit) = {
