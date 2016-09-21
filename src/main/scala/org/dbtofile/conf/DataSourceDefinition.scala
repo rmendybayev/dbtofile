@@ -60,8 +60,8 @@ case class Relation(@BeanProperty baseTable: String,
                     @BeanProperty childFK: String)
 
 object DataSourceDefinition {
-  def load(): Db = {
-    val connection = DriverManager.getConnection("jdbc:mysql://192.168.99.100:32783/employees", "root", "root")
+  def load(connectionString:String, user:String, password:String): Db = {
+    val connection = DriverManager.getConnection(connectionString, user, password)
     val metadata: DatabaseMetaData = connection.getMetaData
 
     val tableNames: List[String] = DbOps.listTables(metadata)
@@ -78,7 +78,7 @@ object DataSourceDefinition {
   }
 
   def main(args: Array[String]): Unit = {
-    val db = load()
+    val db = load("jdbc:mysql://192.168.99.100:32783/employees", "root", "root")
     println(YamlOps.toString(db))
   }
 }
