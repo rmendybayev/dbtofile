@@ -19,6 +19,8 @@
 package org.dbtofile.utils
 
 
+import java.io.{BufferedWriter, File, FileWriter}
+
 import org.yaml.snakeyaml.DumperOptions.FlowStyle
 import org.yaml.snakeyaml.{DumperOptions, Yaml}
 import org.yaml.snakeyaml.introspector.BeanAccess
@@ -26,7 +28,8 @@ import org.yaml.snakeyaml.nodes.Tag
 import org.yaml.snakeyaml.representer.Representer
 
 object YamlOps {
-  def toString [T] (entity: T) = {
+
+  def generateYaml[T](entity: T): Yaml = {
     val options = new DumperOptions
     options.setDefaultFlowStyle(FlowStyle.BLOCK)
     options.setExplicitStart(false)
@@ -37,6 +40,18 @@ object YamlOps {
     val yaml = new Yaml(representer, options)
 
     yaml.setBeanAccess(BeanAccess.FIELD)
+    yaml
+  }
+
+  def toString [T] (entity: T) = {
+    val yaml: Yaml = generateYaml(entity)
     yaml.dump(entity)
+  }
+
+  def toString [T](entity: T, outputFile: File) = {
+    val bw = new BufferedWriter(new FileWriter(outputFile))
+    val yaml: Yaml = generateYaml(entity)
+    yaml.dump(entity, bw)
+    bw.close()
   }
 }
