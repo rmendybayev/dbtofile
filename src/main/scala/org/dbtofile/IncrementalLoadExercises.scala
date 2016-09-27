@@ -44,7 +44,7 @@ object IncrementalLoadExercises {
 
     val ds = DataSourceDefinition.load(dbUrl, dbUser, dbPass)
 
-    val employeesTable = ds.tables.find(_.name=="employees").get
+    val employeesTable = ds.tables.find(_.name == "employees").get
     val loader = new Loader(opts)
     loader.load(employeesTable)
 
@@ -53,7 +53,7 @@ object IncrementalLoadExercises {
 
 }
 
-class Loader(val options:Map[String,String]) {
+class Loader(val options: Map[String, String]) {
 
   val spark = SparkSession
     .builder()
@@ -66,51 +66,81 @@ class Loader(val options:Map[String,String]) {
 
   def load(tableInfo: DbTable, addChecksum: Boolean = true) = {
 
-    val snapshot= new File(s"${options("snapshot.location")}/${tableInfo.name}")
-    val df = if(snapshot.exists()){
-      loadIncrement(tableInfo, addChecksum)
-    }else{
+    val snapshotDir = new File(tableSnapshot(tableInfo))
+    val df = if (snapshotDir.exists()) {
+
+      val columns = tableInfo.columns.map(_.name)
+      val recordsPerPartition = options.getOrElse("partition.size", "10000").toInt
+      val table: DataFrame = spark.read.format("jdbc").options(options).option("dbtable", tableInfo.name).load()
+      val snapshot: DataFrame = spark.read.parquet(snapshotDir.getAbsolutePath)
+
+      val numOfPartitions = table.count() / recordsPerPartition
+
+      val partitions = partitionSummaries(tableInfo, table, snapshot, numOfPartitions).where(col("require_reprocessing")).collect().map(_.getAs[Long]("group_key"))
+      if (partitions.nonEmpty) {
+        //merge and compact
+        partitions.foreach(p => println(s"Partition $p will be reloaded"))
+
+        //load updated partitions from DB
+        val updates = table.withColumn("group_key", groupKeyColumn(tableInfo.pk.map(_.name).toList, numOfPartitions))
+          .where(col("group_key").isin(partitions: _*))
+          .drop("group_key")
+
+
+        //load partitions without changes from historical snapshot
+        val historicalData = snapshot.withColumn("group_key", groupKeyColumn(tableInfo.pk.map(_.name).toList, numOfPartitions))
+          .where(not(col("group_key").isin(partitions: _*)))
+          .drop("group_key")
+
+        //todo save update or merge update with historical data ???
+
+        //merge partitions
+        val updatedSnapshot = updates.select(columns.head, columns.tail:_*).union(historicalData.select(columns.head, columns.tail:_*))
+        updatedSnapshot.write.parquet(s"${snapshotDir.getAbsolutePath}.new")
+
+      } else {
+        println("no changes")
+      }
+
+
+    } else {
       initialLoad(tableInfo, addChecksum)
     }
 
   }
 
-  def initialLoad (tableInfo: DbTable, addChecksum: Boolean = true) = {
+  def tableSnapshot(tableInfo: DbTable): String = {
+    s"${options("snapshot.location")}/${tableInfo.name}"
+  }
+
+  def initialLoad(tableInfo: DbTable, addChecksum: Boolean = true) = {
     spark.read.format("jdbc").options(options).option("dbtable", tableInfo.name).load()
-      .write.parquet(s"${options("snapshot.location")}/${tableInfo.name}")
+      .write.parquet(tableSnapshot(tableInfo))
 
   }
 
-  def loadIncrement(tableInfo: DbTable, addChecksum: Boolean = true) = {
-    //"dbtable" -> "employees",
-
-    val recordsPerPartition=options.getOrElse("partition.size","10000").toInt
-    val table: DataFrame = spark.read.format("jdbc").options(options).option("dbtable", tableInfo.name).load()
-    val snapshot:DataFrame = spark.read.parquet(s"${options("snapshot.location")}/${tableInfo.name}")
-
-    val numOfPartitions = table.count()/recordsPerPartition
-
+  def partitionSummaries(tableInfo: DbTable, table:DataFrame, snapshot: DataFrame, numOfPartitions:Long = 100) = {
 
     val tablePartitions: DataFrame = table.select(
-      groupKeyColumn(tableInfo.pk.map(_.name).toList,numOfPartitions),
+      groupKeyColumn(tableInfo.pk.map(_.name).toList, numOfPartitions),
       rowChecksumColumn(tableInfo.columns.map(_.name).toList)
     ).groupBy("group_key").agg(sum("checksum").as("group_checksum"), count("*").as("group_count"))
 
 
     val snapshotPartitions = snapshot.select(
-      groupKeyColumn(tableInfo.pk.map(_.name).toList,numOfPartitions),
+      groupKeyColumn(tableInfo.pk.map(_.name).toList, numOfPartitions),
       rowChecksumColumn(tableInfo.columns.map(_.name).toList)
     ).groupBy("group_key").agg(sum("checksum").as("snpsht_group_checksum"), count("*").as("snpsht_group_count"))
 
-    val partitions = tablePartitions.join(snapshotPartitions, "group_key").withColumn("require_reprocessing",
+    tablePartitions.join(snapshotPartitions, "group_key").withColumn("require_reprocessing",
       when(col("group_checksum").equalTo(col("snpsht_group_checksum")), false).otherwise(true))
-
-    partitions.show(100)
-
+      .select("group_key").where(col("require_reprocessing"))
 
   }
 
-  def groupKeyColumn(keys: List[String], numOfPartitions: Long = 10, columnName:String="group_key"): Column = {
+  def mergeAndCompact = ???
+
+  def groupKeyColumn(keys: List[String], numOfPartitions: Long = 10, columnName: String = "group_key"): Column = {
     pmod(crc32(concat_ws("|", keys.map(c => col(c)): _*)), lit(numOfPartitions)).as(columnName)
   }
 
