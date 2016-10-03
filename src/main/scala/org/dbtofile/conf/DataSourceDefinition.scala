@@ -31,6 +31,7 @@ case class Db(@BeanProperty dbName: String,
 
   /**
     * List tables that can be joined to specified table
+    *
     * @param table
     * @return
     */
@@ -52,7 +53,12 @@ case class Column(@BeanProperty name: String,
 
 case class DbTable(@BeanProperty name: String,
                    @BeanProperty pk: Array[Column],
-                   @BeanProperty columns: Array[Column])
+                   @BeanProperty columns: Array[Column]) {
+
+  lazy val pkNames: Array[String] = pk.map(_.name)
+
+  lazy val colNames: Array[String] = columns.map(_.name)
+}
 
 case class Relation(@BeanProperty baseTable: String,
                     @BeanProperty basePK: String,
@@ -60,7 +66,7 @@ case class Relation(@BeanProperty baseTable: String,
                     @BeanProperty childFK: String)
 
 object DataSourceDefinition {
-  def load(connectionString:String, user:String, password:String): Db = {
+  def load(connectionString: String, user: String, password: String): Db = {
     val connection = DriverManager.getConnection(connectionString, user, password)
     val metadata: DatabaseMetaData = connection.getMetaData
 
