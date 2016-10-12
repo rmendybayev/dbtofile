@@ -20,6 +20,7 @@ package org.dbtofile.conf
 
 import java.sql.{DatabaseMetaData, DriverManager}
 
+import org.apache.spark.sql.SparkSession
 import org.dbtofile.utils.{DbOps, YamlOps}
 
 import scala.beans.BeanProperty
@@ -78,7 +79,7 @@ object DataSourceDefinition {
       (DbTable(tableName, pk, columns), tableRelations)
     })
 
-    Db("employees", tables.map(_._1).toArray, tables.flatMap(_._2).toArray)
+    Db(connection.getCatalog, tables.map(_._1).toArray, tables.flatMap(_._2).toArray)
 
 
   }
