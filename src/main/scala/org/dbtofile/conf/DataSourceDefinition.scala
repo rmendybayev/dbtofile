@@ -29,8 +29,27 @@ case class Db(@BeanProperty dbName: String,
               @BeanProperty tables: Array[DbTable],
               @BeanProperty relations: Array[Relation]) {
 
+  def findRelations(baseTable: String, childTable: String) = findPath(baseTable, childTable)
+
+  private[this] def findPath(startPoint: String, endPoint: String, route: List[Relation] = Nil): List[Relation] = {
+    relations.find(r => r.baseTable == startPoint && r.childTable == endPoint) match {
+      case Some(r) =>
+        //direct connection was found
+        route :+ r
+      case None =>
+        val possibleRoutes = relations.filter(r => r.baseTable == startPoint)
+          .filterNot(r => route.map(_.childTable).contains(r.childTable))
+        possibleRoutes.map(r => findPath(r.childTable, endPoint, route :+ r))
+          .filterNot(_.isEmpty).sortBy(_.length).headOption.getOrElse(Nil)
+
+    }
+
+  }
+
+
   /**
     * List tables that can be joined to specified table
+    *
     * @param table
     * @return
     */
@@ -60,7 +79,7 @@ case class Relation(@BeanProperty baseTable: String,
                     @BeanProperty childFK: String)
 
 object DataSourceDefinition {
-  def load(connectionString:String, user:String, password:String): Db = {
+  def load(connectionString: String, user: String, password: String): Db = {
     val connection = DriverManager.getConnection(connectionString, user, password)
     val metadata: DatabaseMetaData = connection.getMetaData
 
@@ -76,4 +95,5 @@ object DataSourceDefinition {
 
 
   }
+
 }
