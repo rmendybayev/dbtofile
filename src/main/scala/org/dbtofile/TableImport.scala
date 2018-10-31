@@ -17,12 +17,11 @@
 
 package org.dbtofile
 
-import java.io.{File, FileInputStream}
+import java.io.FileInputStream
 
-import org.apache.spark.sql.SaveMode
-import org.apache.spark.{SparkConf, SparkContext}
-import org.dbtofile.conf.TableList
-import org.dbtofile.merge.DataSourceMerger
+import com.typesafe.config.ConfigFactory
+import org.apache.spark.SparkConf
+import org.apache.spark.sql.SparkSession
 import org.dbtofile.load.DataLoader
 import org.yaml.snakeyaml.Yaml
 import org.yaml.snakeyaml.constructor.Constructor
@@ -33,42 +32,21 @@ import org.yaml.snakeyaml.constructor.Constructor
 object TableImport {
 
   def main(args: Array[String]): Unit = {
-    case class Config( conf: File = new File("."), loadTables: Boolean = false)
-    val parser = new scopt.OptionParser[Config]("scopt") {
-      head("TableImport", "0.1")
+    val appConf = ConfigFactory.load()
+    val sparkConf = new SparkConf()
+      .setAppName(appConf.getString("app.name"))
 
-      opt[File]('c', "conf").required().valueName("").
-        action( (x, c) => c.copy(conf = x) ).
-        text("conf is a required configuration property")
+    val spark = SparkSession
+      .builder()
+      .config(sparkConf)
+      .getOrCreate()
+
+    val input = new FileInputStream("src/main/resources/tables_conf.yaml")
+    val yaml = new Yaml(new Constructor(classOf[org.dbtofile.conf.TableList]))
+    val t = yaml.load(input).asInstanceOf[org.dbtofile.conf.TableList]
+
+    for (table <- t.tables) {
+      DataLoader.loadData(table, spark)
     }
-
-    parser.parse(args, Config()) match {
-      case Some(config) =>
-      // do stuff
-
-        var conf = new SparkConf
-
-        var sc = new SparkContext("local[*]", "TableImport", conf)
-        val sqlContext = new org.apache.spark.sql.SQLContext(sc)
-
-        val filename = "src/main/resources/tables_conf.yaml"
-        val input = new FileInputStream(config.conf)
-        val yaml = new Yaml(new Constructor(classOf[TableList]))
-        val t = yaml.load(input).asInstanceOf[TableList]
-
-        for (table <- t.tables) {
-          DataLoader.loadDataFromMySQL(table, sqlContext)
-        }
-
-        for (merge <- t.merges) {
-          var df = DataSourceMerger.mergeTable(merge, sqlContext)
-          //df.head(10)
-          df.write.mode(SaveMode.Overwrite).format(merge.outputTable.outputFormat).save(merge.outputTable.outputPath)
-        }
-
-      case None =>
-      // arguments are bad, error message will have been displayed
-    }
-
-  }
+}
 }

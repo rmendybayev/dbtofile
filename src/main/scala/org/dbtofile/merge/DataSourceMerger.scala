@@ -18,7 +18,6 @@
 package org.dbtofile.merge
 
 import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.catalyst.ScalaReflectionLock
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.{DataFrame, Row, SQLContext}
 import org.dbtofile.conf.MergeInfo
@@ -27,7 +26,6 @@ import scala.collection.mutable
 import scala.util.Try
 import scala.math.{Integral, Numeric, Ordering}
 import scala.reflect.runtime.universe.typeTag
-import org.apache.spark.sql.catalyst.ScalaReflectionLock
 
 
 
@@ -35,6 +33,7 @@ import org.apache.spark.sql.catalyst.ScalaReflectionLock
 /**
   * Created by grinia on 8/16/16.
   */
+@Deprecated
 object DataSourceMerger {
 
 
@@ -53,45 +52,5 @@ object DataSourceMerger {
 
   }
 
-  def mergeTable(joinInfo:MergeInfo, sqlContext: SQLContext): DataFrame = {
-    var base = sqlContext.read.load(joinInfo.base.table.outputPath)
-
-    var childrens = joinInfo.children.map {
-      info => (info, sqlContext.read.load(info.table.outputPath))
-    }
-
-    val baseMergeType = base.schema.apply(joinInfo.base.mergeKey).dataType
-    import sqlContext.implicits._
-
-    val grouppedChildByKey = childrens.map {
-
-      case (info, df: DataFrame) =>
-        val indx = df.schema.fieldIndex(joinInfo.base.mergeKey)
-
-        val schema = StructType(Seq(
-            StructField(joinInfo.base.mergeKey, baseMergeType, false),
-            StructField(info.table.table, ArrayType(df.schema,false))
-          )
-        )
-       val childRDD =  df.flatMap[(Any, Row)] {
-          r:Row =>
-            var value = sfTypeToScalaType(baseMergeType, r.get(indx));
-            if (value.isSuccess) {
-              Seq((value.get, r))
-            } else {
-              Seq.empty
-            }
-        }.groupByKey.map[Row] {
-          case ((key: Any, value: Seq[Row])) => Row(key, value)
-        }
-        sqlContext.createDataFrame(childRDD, schema)
-    }
-
-    var joinedDF = base
-    grouppedChildByKey.foreach{ ds =>
-      joinedDF = joinedDF.join(ds, joinInfo.base.mergeKey)
-    }
-
-    return joinedDF
-  }
+  def mergeTable(joinInfo:MergeInfo, sqlContext: SQLContext): DataFrame = ???
 }

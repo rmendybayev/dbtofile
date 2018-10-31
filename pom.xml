@@ -25,21 +25,35 @@
     <artifactId>dbtofile</artifactId>
     <version>1.0-SNAPSHOT</version>
 
+    <repositories>
+        <repository>
+            <id>confluent</id>
+            <url>http://packages.confluent.io/maven/</url>
+        </repository>
+    </repositories>
+
     <properties>
-        <spark.version>1.6.1</spark.version>
-        <scala.version>2.10.6</scala.version>
+        <spark.version>2.3.0</spark.version>
+        <scala.version>2.11.12</scala.version>
+        <avro.version>1.8.1</avro.version>
     </properties>
 
     <dependencies>
         <dependency>
             <groupId>org.apache.spark</groupId>
-            <artifactId>spark-core_2.10</artifactId>
+            <artifactId>spark-core_2.11</artifactId>
             <version>${spark.version}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.spark</groupId>
-            <artifactId>spark-sql_2.10</artifactId>
+            <artifactId>spark-sql_2.11</artifactId>
             <version>${spark.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.databricks</groupId>
+            <artifactId>spark-avro_2.11</artifactId>
+            <version>4.0.0</version>
         </dependency>
 
         <!-- Scala-->
@@ -47,11 +61,12 @@
             <groupId>org.scala-lang</groupId>
             <artifactId>scala-library</artifactId>
             <version>${scala.version}</version>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>com.typesafe</groupId>
             <artifactId>config</artifactId>
-            <version>1.2.1</version>
+            <version>1.3.2</version>
         </dependency>
         <!-- JSON-->
         <dependency>
@@ -89,11 +104,7 @@
             <groupId>com.opencsv</groupId>
             <artifactId>opencsv</artifactId>
             <version>3.5</version>
-        </dependency>
-        <dependency>
-            <groupId>com.github.scopt</groupId>
-            <artifactId>scopt_2.10</artifactId>
-            <version>3.5.0</version>
+            <scope>provided</scope>
         </dependency>
 
         <!-- JDBC -->
@@ -101,8 +112,99 @@
             <groupId>mysql</groupId>
             <artifactId>mysql-connector-java</artifactId>
             <version>5.1.6</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.oracle</groupId>
+            <artifactId>ojdbc7</artifactId>
+            <version>12.1.0.1</version>
+        </dependency>
+
+        <!--AVRO-->
+        <dependency>
+            <groupId>io.confluent</groupId>
+            <artifactId>kafka-avro-serializer</artifactId>
+            <version>3.1.1</version>
+        </dependency>
+        <dependency>
+            <groupId>io.confluent</groupId>
+            <artifactId>kafka-schema-registry-client</artifactId>
+            <version>3.1.1</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.avro</groupId>
+            <artifactId>avro</artifactId>
+            <version>${avro.version}</version>
+            <scope>provided</scope>
+        </dependency>
+
+
+        <!--Test-->
+        <dependency>
+            <groupId>org.scalatest</groupId>
+            <artifactId>scalatest_2.11</artifactId>
+            <version>3.0.5</version>
+            <scope>test</scope>
         </dependency>
 
     </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.scala-tools</groupId>
+                <artifactId>maven-scala-plugin</artifactId>
+                <version>2.15.0</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>compile</goal>
+                            <goal>testCompile</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>2.6</version>
+                <configuration>
+                    <useFile>false</useFile>
+                    <disableXmlReport>true</disableXmlReport>
+                    <!-- If you have classpath issue like NoDefClassError,... -->
+                    <!-- useManifestOnlyJar>false</useManifestOnlyJar -->
+                    <includes>
+                        <include>**/*Test.*</include>
+                        <include>**/*Suite.*</include>
+                    </includes>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-assembly-plugin</artifactId>
+                <configuration>
+                    <descriptorRefs>
+                        <descriptorRef>jar-with-dependencies</descriptorRef>
+                    </descriptorRefs>
+                    <finalName>${project.artifactId}-${project.version}</finalName>
+                    <appendAssemblyId>false</appendAssemblyId>
+                    <archive>
+                        <manifest>
+                            <mainClass>org.dbtofile.TableImport</mainClass>
+                        </manifest>
+                    </archive>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>make-assembly</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>single</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
     
 </project>

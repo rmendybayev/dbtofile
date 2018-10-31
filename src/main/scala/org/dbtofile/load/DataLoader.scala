@@ -17,8 +17,12 @@
 
 package org.dbtofile.load
 
-import org.apache.spark.sql.{SQLContext, SaveMode}
+import java.util.Properties
+
+import org.apache.spark.sql.{SQLContext, SaveMode, SparkSession}
 import org.dbtofile.conf.TableInfo
+import org.dbtofile.schema.{SchemaConverter, SchemaRegistry}
+import org.dbtofile.util.Metrics
 
 
 /**
@@ -26,22 +30,36 @@ import org.dbtofile.conf.TableInfo
   */
 object DataLoader {
 
-    def loadDataFromMySQL(dbInfo: TableInfo, sqlContext: SQLContext,
-                          outputPath: String = null, outputFormat:String = null ) {
+  def loadData(dbInfo: TableInfo, sparkSession: SparkSession, outputPath: String = null, outputFormat: String = null): Unit = {
 
-      if (!dbInfo.load) {
-        return
-      }
-      var table = sqlContext.read.format("jdbc")
-        .option("url", dbInfo.url)
-        .option("dbtable", dbInfo.table)
-        .option("user", dbInfo.user)
-        .option("password", dbInfo.password)
-        .load()
-      table.registerTempTable(dbInfo.table)
-
-      table.write.mode(SaveMode.Append)
-                .format(Option(outputFormat).getOrElse(dbInfo.outputFormat))
-                .save(Option(outputFormat).getOrElse(dbInfo.outputPath))
+    if (!dbInfo.load) {
+      return
     }
+
+    def readTable() = {
+      val props = new Properties()
+      props.setProperty("driver", "oracle.jdbc.driver.OracleDriver")
+      props.setProperty("password", dbInfo.password)
+      props.setProperty("user", dbInfo.user)
+      props.setProperty("url", dbInfo.url)
+      //      props.setProperty("partitionColumn", dbInfo.partCol) FIXME: add config for parallelization
+      //      props.setProperty("lowerBound", dbInfo.lowerB)
+      //      props.setProperty("upperBound", dbInfo.upperB)
+      //      props.setProperty("numPartitions", partitionNumber.toString)
+      sparkSession.read.jdbc(dbInfo.url, dbInfo.table, props)
+    }
+
+    val metrics = Metrics(dbInfo.table, dbInfo.outputPath)(sparkSession)
+    val avroConverter = SchemaConverter.apply("") //FIXME: add config
+
+    val table = metrics.apply(readTable()).transform(avroConverter.transformTable(_, ""))
+
+    table
+      .repartition(1)
+      .write
+      .mode(SaveMode.Append)
+      .format(Option(outputFormat).getOrElse(dbInfo.outputFormat))
+      .save(Option(outputFormat).getOrElse(dbInfo.outputPath))
+    metrics.reportStatistics()
+  }
 }
