@@ -2,6 +2,7 @@ package org.dbtofile.schema
 
 import com.databricks.spark.avro.SchemaConverters
 import org.apache.avro.Schema
+import org.apache.spark.sql.functions.{current_timestamp, lit, monotonically_increasing_id}
 import org.apache.spark.sql.{DataFrame, Dataset, Row}
 import org.apache.spark.sql.types.{DataType, StructType}
 
@@ -25,14 +26,10 @@ class SchemaConverter(schemaRegistry: SchemaRegistry) {
     val columns = tableDS.schema.toList.diff(sqlSchema.toList).map(_.name)
 
     val bulk = bulkCastToSchema(tableDS, columns, sqlSchema)
-    val cols = "op_type" +: "op_ts" +: "current_ts" +: "pos" +:bulk.columns
+    val cols = addGGColumns(bulk.columns)
 
-    val output = bulk
-      .withColumn("table", lit(tableName).cast("string")) //FIXME: Add config here
-      .withColumn("op_type", lit(null).cast("string"))
-      .withColumn("op_ts", lit(null).cast("string"))
-      .withColumn("current_ts", lit(null).cast("string"))
-      .withColumn("pos", lit(null).cast("string"))
+    val output = withGGColumns(bulk)
+      .withColumn("table", lit(tableName).cast("string"))
       .select("table", cols:_*)
     output
   }
@@ -52,6 +49,15 @@ class SchemaConverter(schemaRegistry: SchemaRegistry) {
 
   private def castColumnTo(df: DataFrame, cn: String, tpe: DataType) : DataFrame = {
     df.withColumn(cn, df(cn).cast(tpe))
+  }
+
+  private def addGGColumns(cols: Seq[String]): Seq[String] = "op_type" +: "op_ts" +: "current_ts" +: "pos" +:cols
+
+  private def withGGColumns(df: DataFrame): DataFrame = {
+    df.withColumn("op_type", lit("I").cast("string"))
+      .withColumn("op_ts", lit(current_timestamp()).cast("string"))
+      .withColumn("current_ts", lit(current_timestamp()).cast("string"))
+      .withColumn("pos", lit(monotonically_increasing_id()).cast("string"))
   }
 
 }
