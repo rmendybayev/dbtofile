@@ -19,7 +19,8 @@ package org.dbtofile.load
 
 import java.util.Properties
 
-import org.apache.spark.sql.{SQLContext, SaveMode, SparkSession}
+import com.typesafe.config.Config
+import org.apache.spark.sql._
 import org.dbtofile.conf.TableInfo
 import org.dbtofile.schema.{SchemaConverter, SchemaRegistry}
 import org.dbtofile.util.Metrics
@@ -30,7 +31,7 @@ import org.dbtofile.util.Metrics
   */
 object DataLoader {
 
-  def loadData(dbInfo: TableInfo, sparkSession: SparkSession, outputPath: String = null, outputFormat: String = null): Unit = {
+  def loadData(dbInfo: TableInfo, sparkSession: SparkSession, appConf: Config, outputPath: String = "/tmp/dbtofile", outputFormat: String = "parquet"): Unit = {
 
     if (!dbInfo.load) {
       return
@@ -46,20 +47,21 @@ object DataLoader {
       //      props.setProperty("lowerBound", dbInfo.lowerB)
       //      props.setProperty("upperBound", dbInfo.upperB)
       //      props.setProperty("numPartitions", partitionNumber.toString)
-      sparkSession.read.jdbc(dbInfo.url, dbInfo.table, props)
+      sparkSession.read.jdbc(dbInfo.url, dbInfo.sql, props)
     }
 
     val metrics = Metrics(dbInfo.table, dbInfo.outputPath)(sparkSession)
-    val avroConverter = SchemaConverter.apply("") //FIXME: add config
+    val avroConverter = SchemaConverter.apply(appConf.getString("schema.registry.url"))
 
-    val table = metrics.apply(readTable()).transform(avroConverter.transformTable(_, ""))
+    val table = metrics.apply(readTable()).transform((tableDS: Dataset[Row]) => avroConverter.transformTable(tableDS, dbInfo.schema, dbInfo.table))
+    val partitionNumber = Option(dbInfo.partition).getOrElse(1)
 
     table
-      .repartition(1)
+      .repartition(partitionNumber)
       .write
       .mode(SaveMode.Append)
-      .format(Option(outputFormat).getOrElse(dbInfo.outputFormat))
-      .save(Option(outputFormat).getOrElse(dbInfo.outputPath))
+      .format(Option(dbInfo.outputFormat).getOrElse(outputFormat))
+      .save(Option(dbInfo.outputPath).getOrElse(outputPath))
     metrics.reportStatistics()
   }
 }

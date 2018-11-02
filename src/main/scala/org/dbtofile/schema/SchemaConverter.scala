@@ -17,7 +17,7 @@ class SchemaConverter(schemaRegistry: SchemaRegistry) {
     }
   }
 
-  def transformTable(tableDS: Dataset[Row], schemaName: String): Dataset[Row] = {
+  def transformTable(tableDS: Dataset[Row], schemaName: String, tableName: String): Dataset[Row] = {
     val schema = schemaRegistry.recordSchema(schemaName)
     val sqlSchema = convertToSqlSchema(schema)
 
@@ -28,7 +28,7 @@ class SchemaConverter(schemaRegistry: SchemaRegistry) {
     val cols = "op_type" +: "op_ts" +: "current_ts" +: "pos" +:bulk.columns
 
     val output = bulk
-      .withColumn("table", lit(null).cast("string")) //FIXME: Add config here
+      .withColumn("table", lit(tableName).cast("string")) //FIXME: Add config here
       .withColumn("op_type", lit(null).cast("string"))
       .withColumn("op_ts", lit(null).cast("string"))
       .withColumn("current_ts", lit(null).cast("string"))

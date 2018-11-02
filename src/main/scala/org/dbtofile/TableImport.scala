@@ -22,6 +22,7 @@ import java.io.FileInputStream
 import com.typesafe.config.ConfigFactory
 import org.apache.spark.SparkConf
 import org.apache.spark.sql.SparkSession
+import org.dbtofile.load.DataLoader
 import org.yaml.snakeyaml.Yaml
 import org.yaml.snakeyaml.constructor.Constructor
 
@@ -45,7 +46,7 @@ object TableImport {
     val t = yaml.load(input).asInstanceOf[org.dbtofile.conf.TableList]
 
     for (table <- t.tables) {
-//      DataLoader.loadData(table, spark)
+      DataLoader.loadData(table, spark, appConf)
       println(table.table)
     }
 }

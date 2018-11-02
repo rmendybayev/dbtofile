@@ -41,20 +41,26 @@ case class TableList(
 case class TableInfo (
      @BeanProperty var url: String,
      @BeanProperty var table: String,
+     @BeanProperty var schema: String,
+     @BeanProperty var sql: String,
      @BeanProperty var user: String,
      @BeanProperty var password: String,
      @BeanProperty var outputPath: String,
      @BeanProperty var outputFormat: String = "json",
-     @BeanProperty var sql: String,
+     @BeanProperty var partition: Int,
+     @BeanProperty var count: String,
+     @BeanProperty var partCol: String,
+     @BeanProperty var upperB: String,
+     @BeanProperty var lowerB: String,
      @BeanProperty var load: Boolean) {
 
     def this() = {
-      this(null, null, null, null, null, null, null, false)
+      this(null, null, null, null, null, null, null, null, 1, null, null, null, null, false)
     }
 
     def this(tableInfo: TableInfo) = {
-      this(tableInfo.url, tableInfo.table, tableInfo.user, tableInfo.password, tableInfo.outputPath,
-           tableInfo.outputFormat, tableInfo.sql, tableInfo.getLoad)
+      this(tableInfo.url, tableInfo.table, tableInfo.schema, tableInfo.sql, tableInfo.user, tableInfo.password, tableInfo.outputPath,
+        tableInfo.outputFormat, tableInfo.partition, tableInfo.count, tableInfo.partCol, tableInfo.upperB, tableInfo.lowerB, tableInfo.getLoad)
     }
 }
 
