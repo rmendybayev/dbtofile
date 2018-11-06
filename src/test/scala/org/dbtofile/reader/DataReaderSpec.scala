@@ -10,7 +10,7 @@ import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.spark.sql._
 import org.apache.spark.sql.catalyst.encoders.RowEncoder
-import org.apache.spark.sql.types.{DataType, IntegerType, StructField, StructType}
+import org.apache.spark.sql.types._
 import org.yaml.snakeyaml.Yaml
 import org.yaml.snakeyaml.constructor.Constructor
 
@@ -18,16 +18,17 @@ import org.yaml.snakeyaml.constructor.Constructor
 class DataReaderSpec
   extends FunSpec with BeforeAndAfter
   with SparkSessionTestWrapper {
-  val converter: SchemaConverter = null
+  var converter: SchemaConverter = null
 
   before {
     val fileSystem = FileSystem.get(new java.net.URI("output"), new Configuration())
-    fileSystem.delete(new Path("output/FRLOT.avro"), true)
+    //fileSystem.delete(new Path("output/FRLOT.avro"), true)
   }
 
   it("should convert avro schema to sql structure") {
-    val schemaRegistry = new SchemaRegistry("http://10.210.33.10:8081")
-    val schema = schemaRegistry.recordSchema("gf-f8-bigdata-clouddev-dbgemd-data-FRLOT")
+    val schemaRegistry = new SchemaRegistry("http://localhost:8888")
+    val schema = schemaRegistry.recordSchema("gf-f8-bigdata-clouddev-dbgemd-data-FHOPEHS")
+    converter = SchemaConverter.apply("http://localhost:8888")
 
     val outPutSchemaStructType: StructType = converter.convertToSqlSchema(schema)
     println(outPutSchemaStructType)
@@ -88,10 +89,22 @@ class DataReaderSpec
     }
   }
 
+  it("should convert double with higher precision") {
+    import org.apache.spark.sql.functions._
+    val value = "769.227662037037020"
+    val testDf = spark.read.parquet("input/FHOPEHS.parquet").withColumn("test", lit(value))
+    assert(castColumnTo(testDf, "test", DoubleType).select("test").first().get(0).toString === value)
+    assert(castColumnTo(testDf, "test", DecimalType(30, 15)).select("test").first().get(0).toString === value)
+  }
+
 
 
   def castColumnTo(df: DataFrame, cn: String, tpe: DataType) : DataFrame = {
-    df.withColumn(cn, df(cn).cast(tpe))
+    val trasformType = tpe match {
+      case t:DoubleType => DecimalType(30, 15)
+      case f:DataType => f
+    }
+    df.withColumn(cn, df(cn).cast(trasformType))
   }
 
   def bulkCast(df: DataFrame, columns: List[String], schema: StructType): DataFrame = {

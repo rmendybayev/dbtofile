@@ -1,11 +1,8 @@
 package org.dbtofile.schema
 
-import com.databricks.spark.avro.SchemaConverters
 import io.confluent.kafka.schemaregistry.client.CachedSchemaRegistryClient
 import org.apache.avro.Schema
 import org.apache.avro.Schema.Type
-import org.apache.spark.sql.{DataFrame, Dataset, Row}
-import org.apache.spark.sql.types.{DataType, StructType}
 
 import scala.collection.JavaConversions._
 import scala.language.implicitConversions

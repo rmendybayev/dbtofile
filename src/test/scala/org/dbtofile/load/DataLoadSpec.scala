@@ -16,7 +16,7 @@ class DataLoadSpec extends FunSpec
 
   before {
     val fileSystem = FileSystem.get(new java.net.URI("output"), new Configuration())
-    //fileSystem.delete(new Path("output/FHOPEHS.parquet"), true)
+    //fileSystem.delete(new Path("output/"), true)
   }
 
   it("should read yaml to load table") {
@@ -29,20 +29,33 @@ class DataLoadSpec extends FunSpec
       DataLoader.loadData(table, spark, appConf)
       val output = spark.read.parquet(table.outputPath)
       val input = spark.read.parquet("input/FHOPEHS.parquet")
-      assert(output.schema === input.schema)
+      //assert(output.schema === input.schema)
     }
   }
 
-  it("should validate output parquet") {
-    val output = spark.read.parquet("output/FHOPEHS.parquet")
-    output.select("table", "op_type", "op_ts", "current_ts", "pos").show(5, false)
-    assert(output.select("pos").distinct().count() === output.count())
 
+  it("should print all type of schemas") {
+//    spark.read.parquet("output/dbtofile-without").printSchema()
+//    spark.read.parquet("output/dbtofile").filter("OPE_NO = '2570.1700'").show(false)
+//    spark.read.parquet("output/ongoing/siview_mmdb.fhopehs").printSchema()
+//    spark.read.parquet("input/ongoing").printSchema()
+    spark.read.parquet("input/ongoing").filter("OPE_NO = '2570.1700'").show(false)
   }
 
-  it("should show current_date") {
-    import org.apache.spark.sql.functions._
-    val input = spark.read.parquet("input/FHOPEHS.parquet").withColumn("op_ts_1", lit(current_timestamp()))
-    input.select("table", "op_ts", "op_ts_1").show(5, false)
+  it("should read output from batch-ingestion and compare") {
+    val dbtofile = "output/db/SIVIEW_MMDB.FHOPEHS"
+    val ongoing = "output/ongoing/SIVIEW_MMDB.FHOPEHS"
+
+    val df1 = spark.read.parquet(dbtofile)
+    val df2 = spark.read.parquet(ongoing)
+
+    assert(df1.count() === df2.count())
+    val df11 = df1.filter("OPE_NO = '2570.1700'")
+    val df12 = df2.filter("OPE_NO = '2570.1700'")
+    df11.show(false)
+    df12.show(false)
+    df11.union(df12).distinct().except(df11.intersect(df12)).show(false)
+    assert(df11.intersect(df12).count() > 0)
+    assert(df11.union(df12).distinct().except(df11.intersect(df12)).count() === 0)
   }
 }

@@ -4,7 +4,7 @@ import com.databricks.spark.avro.SchemaConverters
 import org.apache.avro.Schema
 import org.apache.spark.sql.functions.{current_timestamp, lit, monotonically_increasing_id}
 import org.apache.spark.sql.{DataFrame, Dataset, Row}
-import org.apache.spark.sql.types.{DataType, StructType}
+import org.apache.spark.sql.types.{DataType, DecimalType, DoubleType, StructType}
 
 class SchemaConverter(schemaRegistry: SchemaRegistry) {
   def convertToSqlSchema(schema: Schema): StructType = {
@@ -48,7 +48,11 @@ class SchemaConverter(schemaRegistry: SchemaRegistry) {
   }
 
   private def castColumnTo(df: DataFrame, cn: String, tpe: DataType) : DataFrame = {
-    df.withColumn(cn, df(cn).cast(tpe))
+    val trasformType = tpe match {
+      case t:DoubleType => DecimalType(30, 13)//GG scale
+      case f:DataType => f
+    }
+    df.withColumn(cn, df(cn).cast(trasformType))
   }
 
   private def addGGColumns(cols: Seq[String]): Seq[String] = "op_type" +: "op_ts" +: "current_ts" +: "pos" +:cols
