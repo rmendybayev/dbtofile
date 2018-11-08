@@ -1,0 +1,55 @@
+kind: PersistentVolume
+apiVersion: v1
+metadata:
+  name: spark-conf-k8s-pv
+  namespace: default
+spec:
+  capacity:
+    storage: 1Gi
+  accessModes:
+  - ReadWriteMany
+  claimRef:
+    namespace: default
+    name:  spark-conf-k8s-pvc
+  hostPath:
+    path: /data/spark
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name:  spark-exec-k8s-pvc
+  namespace: default
+spec:
+  accessModes:
+  - ReadWriteMany
+  resources:
+    requests:
+      storage: 512Mi
+---
+kind: PersistentVolume
+apiVersion: v1
+metadata:
+  name: spark-exec-k8s-pv
+  namespace: default
+spec:
+  capacity:
+    storage: 1Gi
+  accessModes:
+  - ReadWriteMany
+  claimRef:
+    namespace: default
+    name:  spark-exec-k8s-pvc
+  hostPath:
+    path: /data/exec
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name:  spark-conf-k8s-pvc
+  namespace: default
+spec:
+  accessModes:
+  - ReadWriteMany
+  resources:
+    requests:
+      storage: 512Mi

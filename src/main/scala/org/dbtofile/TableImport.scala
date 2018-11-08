@@ -47,7 +47,6 @@ object TableImport {
 
     for (table <- t.tables) {
       DataLoader.loadData(table, spark, appConf)
-      println(table.table)
     }
 }
 }
