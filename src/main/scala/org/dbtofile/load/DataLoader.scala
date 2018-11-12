@@ -17,8 +17,13 @@
 
 package org.dbtofile.load
 
-import org.apache.spark.sql.{SaveMode, SparkSession}
+import java.util.Properties
+
+import com.typesafe.config.Config
+import org.apache.spark.sql._
 import org.dbtofile.conf.TableInfo
+import org.dbtofile.schema.{SchemaConverter, SchemaRegistry}
+import org.dbtofile.util.Metrics
 
 
 /**
@@ -26,22 +31,37 @@ import org.dbtofile.conf.TableInfo
   */
 object DataLoader {
 
-    def loadDataFromMySQL(dbInfo: TableInfo, sqlContext: SparkSession,
-                          outputPath: String = null, outputFormat:String = null ) {
+  def loadData(dbInfo: TableInfo, sparkSession: SparkSession, appConf: Config, outputPath: String = "/tmp/dbtofile", outputFormat: String = "parquet"): Unit = {
 
-      if (!dbInfo.load) {
-        return
-      }
-      var table = sqlContext.read.format("jdbc")
-        .option("url", dbInfo.url)
-        .option("dbtable", dbInfo.table)
-        .option("user", dbInfo.user)
-        .option("password", dbInfo.password)
-        .load()
-      table.createOrReplaceTempView(dbInfo.table)
-
-      table.write.mode(SaveMode.Append)
-                .format(Option(outputFormat).getOrElse(dbInfo.outputFormat))
-                .save(Option(outputFormat).getOrElse(dbInfo.outputPath))
+    if (!dbInfo.load) {
+      return
     }
+
+    def readTable() = {
+      val props = new Properties()
+      props.setProperty("driver", "oracle.jdbc.driver.OracleDriver")
+      props.setProperty("password", dbInfo.password)
+      props.setProperty("user", dbInfo.user)
+      props.setProperty("url", dbInfo.url)
+      //      props.setProperty("partitionColumn", dbInfo.partCol) FIXME: add config for parallelization
+      //      props.setProperty("lowerBound", dbInfo.lowerB)
+      //      props.setProperty("upperBound", dbInfo.upperB)
+      //      props.setProperty("numPartitions", partitionNumber.toString)
+      sparkSession.read.jdbc(dbInfo.url, dbInfo.sql, props)
+    }
+
+    val metrics = Metrics(dbInfo.table, dbInfo.outputPath)(sparkSession)
+    val avroConverter = SchemaConverter.apply(appConf.getString("schema.registry.url"))
+
+    val table = metrics.apply(readTable()).transform((tableDS: Dataset[Row]) => avroConverter.transformTable(tableDS, dbInfo.schema, dbInfo.table))
+    val partitionNumber = Option(dbInfo.partition).getOrElse(1)
+
+    table
+      .repartition(partitionNumber)
+      .write
+      .mode(SaveMode.Append)
+      .format(Option(dbInfo.outputFormat).getOrElse(outputFormat))
+      .save(Option(dbInfo.outputPath).getOrElse(outputPath))
+    metrics.reportStatistics()
+  }
 }
