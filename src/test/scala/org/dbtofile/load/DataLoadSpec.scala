@@ -16,7 +16,7 @@ class DataLoadSpec extends FunSpec
 
   before {
     val fileSystem = FileSystem.get(new java.net.URI("output"), new Configuration())
-    //fileSystem.delete(new Path("output/"), true)
+    fileSystem.delete(new Path("output/dbtofile"), true)
   }
 
   it("should read yaml to load table") {
