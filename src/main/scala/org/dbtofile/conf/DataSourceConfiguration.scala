@@ -17,12 +17,16 @@
 
 package org.dbtofile.conf
 
-import java.io.{File, FileInputStream}
+import java.io.{File, FileInputStream, FileWriter}
+import java.sql.Date
+import java.time.LocalDate
 
 import org.yaml.snakeyaml.Yaml
 import org.yaml.snakeyaml.constructor.Constructor
 
 import scala.beans.BeanProperty
+import scala.collection.mutable.ListBuffer
+import scala.concurrent.duration.Duration
 
 
 /**
@@ -52,15 +56,16 @@ case class TableInfo (
      @BeanProperty var partCol: String,
      @BeanProperty var upperB: String,
      @BeanProperty var lowerB: String,
-     @BeanProperty var load: Boolean) {
+     @BeanProperty var load: Boolean,
+     @BeanProperty var withDate: Boolean) {
 
     def this() = {
-      this(null, null, null, null, null, null, null, null, 1, null, null, null, null, false)
+      this(null, null, null, null, null, null, null, null, 1, null, null, null, null, false, false)
     }
 
     def this(tableInfo: TableInfo) = {
       this(tableInfo.url, tableInfo.table, tableInfo.schema, tableInfo.sql, tableInfo.user, tableInfo.password, tableInfo.outputPath,
-        tableInfo.outputFormat, tableInfo.partition, tableInfo.count, tableInfo.partCol, tableInfo.upperB, tableInfo.lowerB, tableInfo.getLoad)
+        tableInfo.outputFormat, tableInfo.partition, tableInfo.count, tableInfo.partCol, tableInfo.upperB, tableInfo.lowerB, tableInfo.getLoad, tableInfo.withDate)
     }
 }
 
@@ -88,6 +93,27 @@ object Configuration {
     val input = new FileInputStream(file)
     val yaml = new Yaml(new Constructor(classOf[TableList]))
     val t = yaml.load(input).asInstanceOf[TableList]
-    return t
+    t
   }
+
+  def generateYamlConf(list: TableList, fileName: String): Unit = {
+    val yaml = new Yaml(new Constructor(classOf[TableList]))
+    val writer = new FileWriter(fileName)
+    yaml.dump(list, writer)
+  }
+
+  def generateConfigurationForDate(tableList: TableList, dates: Seq[String], duration: Duration): TableList = {
+    var result = new ListBuffer[TableInfo]
+    tableList.tables.filter(_.withDate).foreach(table => {
+      dates.foreach(date => {
+        val tableByDate = table.copy()
+        val toDate = LocalDate.parse(date).plusDays(duration.toDays)
+        tableByDate.setSql(tableByDate.getSql.replace("$DATE", date).replace("$TODATE", Date.valueOf(toDate).toString))
+        tableByDate.setOutputPath(table.getOutputPath.replace("$DATE", date))
+        result += tableByDate
+      })
+    })
+    TableList(result.toList.toArray)
+  }
+
 }

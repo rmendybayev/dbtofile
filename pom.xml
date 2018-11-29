@@ -23,7 +23,7 @@
 
     <groupId>dbtofile</groupId>
     <artifactId>dbtofile</artifactId>
-    <version>1.1-SNAPSHOT</version>
+    <version>1.2-SNAPSHOT</version>
 
     <repositories>
         <repository>
@@ -43,12 +43,14 @@
             <groupId>org.apache.spark</groupId>
             <artifactId>spark-core_2.11</artifactId>
             <version>${spark.version}</version>
+            <scope>provided</scope>
         </dependency>
         <!--Patched version of spark. Changed take from https://github.com/rmendybayev/spark/tree/feature/oracle_dialect_2_4_0-->
         <dependency>
             <groupId>org.apache.spark</groupId>
             <artifactId>spark-sql_2.11</artifactId>
             <version>2.4.0a</version>
+            <scope>provided</scope>
         </dependency>
 
         <dependency>

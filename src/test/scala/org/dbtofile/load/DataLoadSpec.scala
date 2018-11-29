@@ -3,19 +3,23 @@ package org.dbtofile.load
 import java.io.FileInputStream
 
 import com.typesafe.config.ConfigFactory
-import org.apache.hadoop.conf.Configuration
+import org.dbtofile.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
+import org.apache.spark
 import org.dbtofile.SparkSessionTestWrapper
-import org.scalatest.{BeforeAndAfter, FunSpec}
+import org.scalatest.{BeforeAndAfter, FunSpec, Matchers}
 import org.yaml.snakeyaml.Yaml
 import org.yaml.snakeyaml.constructor.Constructor
 
+import scala.concurrent.duration.Duration
+
 class DataLoadSpec extends FunSpec
+  with Matchers
   with SparkSessionTestWrapper
   with BeforeAndAfter {
 
   before {
-    val fileSystem = FileSystem.get(new java.net.URI("output"), new Configuration())
+    val fileSystem = FileSystem.get(new java.net.URI("output"), new org.apache.hadoop.conf.Configuration())
     fileSystem.delete(new Path("output/dbtofile"), true)
   }
 
@@ -25,22 +29,20 @@ class DataLoadSpec extends FunSpec
     val yaml = new Yaml(new Constructor(classOf[org.dbtofile.conf.TableList]))
     val t = yaml.load(input).asInstanceOf[org.dbtofile.conf.TableList]
 
-    for (table <- t.tables) {
-      DataLoader.loadData(table, spark, appConf)
-      val output = spark.read.parquet(table.outputPath)
-      val input = spark.read.parquet("input/FHOPEHS.parquet")
-      //assert(output.schema === input.schema)
+    t.tables should have size 1
+
+    import collection.JavaConversions._
+    val tableLIst =  if (appConf.getBoolean("generate.enabled"))
+      Configuration.generateConfigurationForDate(t, appConf.getStringList("generate.datelist").toList, Duration(appConf.getString("generate.duration"))) else t
+
+    tableLIst.tables should have size 4
+
+    for (elem <- tableLIst.tables) {
+      DataLoader.loadData(elem, spark, appConf)
     }
+
   }
 
-
-  it("should print all type of schemas") {
-//    spark.read.parquet("output/dbtofile-without").printSchema()
-//    spark.read.parquet("output/dbtofile").filter("OPE_NO = '2570.1700'").show(false)
-//    spark.read.parquet("output/ongoing/siview_mmdb.fhopehs").printSchema()
-//    spark.read.parquet("input/ongoing").printSchema()
-    spark.read.parquet("input/ongoing").filter("OPE_NO = '2570.1700'").show(false)
-  }
 
   it("should read output from batch-ingestion and compare") {
     val dbtofile = "output/db/SIVIEW_MMDB.FHOPEHS"

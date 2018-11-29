@@ -22,9 +22,12 @@ import java.io.FileInputStream
 import com.typesafe.config.ConfigFactory
 import org.apache.spark.SparkConf
 import org.apache.spark.sql.SparkSession
+import org.dbtofile.conf.Configuration
 import org.dbtofile.load.DataLoader
 import org.yaml.snakeyaml.Yaml
 import org.yaml.snakeyaml.constructor.Constructor
+
+import scala.concurrent.duration.Duration
 
 /**
   * Created by grinia on 8/16/16.
@@ -45,7 +48,12 @@ object TableImport {
     val yaml = new Yaml(new Constructor(classOf[org.dbtofile.conf.TableList]))
     val t = yaml.load(input).asInstanceOf[org.dbtofile.conf.TableList]
 
-    for (table <- t.tables) {
+    import collection.JavaConversions._
+    val tableList =  if (appConf.getBoolean("generate.enabled"))
+      Configuration.generateConfigurationForDate(t, appConf.getStringList("generate.datelist").toList, Duration(appConf.getString("generate.duration"))) else t
+
+
+    for (table <- tableList.tables) {
       DataLoader.loadData(table, spark, appConf)
     }
 }
