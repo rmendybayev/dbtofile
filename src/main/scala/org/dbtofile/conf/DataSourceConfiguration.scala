@@ -107,13 +107,23 @@ object Configuration {
     tableList.tables.filter(_.withDate).foreach(table => {
       dates.foreach(date => {
         val tableByDate = table.copy()
-        val toDate = LocalDate.parse(date).plusDays(duration.toDays)
-        tableByDate.setSql(tableByDate.getSql.replace("$DATE", date).replace("$TODATE", Date.valueOf(toDate).toString))
+        val calculatedDates = calculateDate(date, duration)
         tableByDate.setOutputPath(table.getOutputPath.replace("$DATE", date))
+        tableByDate.setSql(
+          tableByDate
+          .getSql
+          .replace("$DATE", Date.valueOf(calculatedDates._1).toString)
+          .replace("$TODATE", Date.valueOf(calculatedDates._2).toString))
         result += tableByDate
       })
     })
     TableList(result.toList.toArray)
+  }
+
+  private def calculateDate(date: String, duration: Duration)  = {
+    val fromDate = LocalDate.parse(date).minusDays(1L)
+    val toDate = fromDate.plusDays(duration.toDays)
+    (fromDate, toDate)
   }
 
 }
