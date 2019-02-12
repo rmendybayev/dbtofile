@@ -6,3 +6,6 @@
 input/
 output/
 conf/
+
+*.yaml
+*.yml

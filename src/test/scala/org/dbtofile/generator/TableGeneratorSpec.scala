@@ -17,9 +17,9 @@ class TableGeneratorSpec extends FunSpec with Matchers {
     val input = new FileInputStream("src/test/resources/fhopehs.yaml")
     val yaml = new Yaml(new Constructor(classOf[org.dbtofile.conf.TableList]))
     val t = yaml.load(input).asInstanceOf[org.dbtofile.conf.TableList]
-    val dateList = List("2018-08-09", "2018-08-10", "2018-08-11", "2018-08-12")
+    val dateList = List("2018-09-01")
 
-    val resultList = Configuration.generateConfigurationForDate(t, dateList, Duration("1 day"))
+    val resultList = Configuration.generateConfigurationForDate(t, dateList, Duration("4 days"))
     Configuration.generateYamlConf(resultList, filename)
   }
 

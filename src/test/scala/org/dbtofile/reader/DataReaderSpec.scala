@@ -97,6 +97,11 @@ class DataReaderSpec
     assert(castColumnTo(testDf, "test", DecimalType(30, 15)).select("test").first().get(0).toString === value)
   }
 
+  it("should read paquet and show value") {
+    import org.apache.spark.sql.functions._
+    val testdf = spark.read.parquet("output/dbtofile")
+  }
+
 
 
   def castColumnTo(df: DataFrame, cn: String, tpe: DataType) : DataFrame = {

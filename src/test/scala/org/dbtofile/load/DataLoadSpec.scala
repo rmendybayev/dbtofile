@@ -29,13 +29,13 @@ class DataLoadSpec extends FunSpec
     val yaml = new Yaml(new Constructor(classOf[org.dbtofile.conf.TableList]))
     val t = yaml.load(input).asInstanceOf[org.dbtofile.conf.TableList]
 
-    t.tables should have size 1
+    t.tables should have size 2
 
     import collection.JavaConversions._
     val tableLIst =  if (appConf.getBoolean("generate.enabled"))
       Configuration.generateConfigurationForDate(t, appConf.getStringList("generate.datelist").toList, Duration(appConf.getString("generate.duration"))) else t
 
-    tableLIst.tables should have size 4
+    tableLIst.tables should have size 2
 
     for (elem <- tableLIst.tables) {
       DataLoader.loadData(elem, spark, appConf)
