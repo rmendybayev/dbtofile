@@ -64,6 +64,7 @@ object DataLoader {
     readTable(false, dbInfo, partitionNumber)(sparkSession)
       .withColumn("sql", lit(dbInfo.sql))
       .write
+      .mode(SaveMode.Append)
       .format(dbInfo.outputFormat)
       .save(dbInfo.outputPath)
   }

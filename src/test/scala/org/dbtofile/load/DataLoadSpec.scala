@@ -3,10 +3,9 @@ package org.dbtofile.load
 import java.io.FileInputStream
 
 import com.typesafe.config.ConfigFactory
-import org.dbtofile.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
-import org.apache.spark
 import org.dbtofile.SparkSessionTestWrapper
+import org.dbtofile.conf.Configuration
 import org.scalatest.{BeforeAndAfter, FunSpec, Matchers}
 import org.yaml.snakeyaml.Yaml
 import org.yaml.snakeyaml.constructor.Constructor
@@ -52,14 +51,25 @@ class DataLoadSpec extends FunSpec
     t.tables should have size 1
 
     import collection.JavaConversions._
-    val tableLIst =  if (appConf.getBoolean("generate.enabled"))
-      Configuration.generateConfigurationForDate(t, appConf.getStringList("generate.datelist").toList, Duration(appConf.getString("generate.duration"))) else t
+    val tableLIst =  if (appConf.getBoolean("generate.enabled")) {
+      val duration = Duration(appConf.getString("generate.duration"))
+      val dateList = if (appConf.getString("generate.date.start").isEmpty)
+        appConf.getStringList("generate.date.list").toList else Configuration.generateDateList(Duration(appConf.getString("generate.date.period")), appConf.getString("generate.date.start"))
+      Configuration.generateConfigurationForDate(t, dateList, duration)
+    } else t
 
-    tableLIst.tables should have size 1
+    tableLIst.tables should have size 5
 
     for (elem <- tableLIst.tables) {
       DataLoader.countStatistics(elem, spark, appConf)
     }
+  }
+
+  it("should provide list of dates based on duration") {
+    val initDate = "2019-01-01"
+    val duration = Duration("5 days")
+    val dates = Configuration.generateDateList(duration, initDate)
+    dates.foreach(println)
   }
 
 

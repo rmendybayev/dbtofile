@@ -120,6 +120,11 @@ object Configuration {
     TableList(result.toList.toArray)
   }
 
+  def generateDateList(duration: Duration, initDate: String): List[String] = {
+    val dates = for (i <- 0 until duration.toDays.toInt) yield LocalDate.parse(initDate).plusDays(i)
+    dates.map(_.toString).toList
+  }
+
   private def calculateDate(date: String, duration: Duration)  = {
     val fromDate = LocalDate.parse(date).minusDays(1L)
     val toDate = fromDate.plusDays(duration.toDays)
