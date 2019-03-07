@@ -43,6 +43,25 @@ class DataLoadSpec extends FunSpec
 
   }
 
+  it("should read yaml and provide count") {
+    val appConf = ConfigFactory.load("test_app.conf")
+    val input = new FileInputStream(appConf.getString("conf"))
+    val yaml = new Yaml(new Constructor(classOf[org.dbtofile.conf.TableList]))
+    val t = yaml.load(input).asInstanceOf[org.dbtofile.conf.TableList]
+
+    t.tables should have size 1
+
+    import collection.JavaConversions._
+    val tableLIst =  if (appConf.getBoolean("generate.enabled"))
+      Configuration.generateConfigurationForDate(t, appConf.getStringList("generate.datelist").toList, Duration(appConf.getString("generate.duration"))) else t
+
+    tableLIst.tables should have size 1
+
+    for (elem <- tableLIst.tables) {
+      DataLoader.countStatistics(elem, spark, appConf)
+    }
+  }
+
 
   it("should read output from batch-ingestion and compare") {
     val dbtofile = "output/db/SIVIEW_MMDB.FHOPEHS"

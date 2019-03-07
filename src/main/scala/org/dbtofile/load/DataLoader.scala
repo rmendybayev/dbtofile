@@ -21,6 +21,7 @@ import java.util.Properties
 
 import com.typesafe.config.Config
 import org.apache.spark.sql._
+import org.apache.spark.sql.functions._
 import org.dbtofile.conf.TableInfo
 import org.dbtofile.schema.SchemaConverter
 import org.dbtofile.util.Metrics
@@ -38,28 +39,11 @@ object DataLoader {
     }
     val partitionNumber = Option(dbInfo.partition).getOrElse(1)
 
-
-    def readTable() = {
-      val parallel = appConf.getBoolean("parallel.enable")
-      val props = new Properties()
-      props.setProperty("driver", "oracle.jdbc.driver.OracleDriver")
-      props.setProperty("password", dbInfo.password)
-      props.setProperty("user", dbInfo.user)
-      props.setProperty("url", dbInfo.url)
-      if (parallel) {
-        props.setProperty("partitionColumn", dbInfo.partCol)
-        props.setProperty("lowerBound", dbInfo.lowerB)
-        props.setProperty("upperBound", dbInfo.upperB)
-        props.setProperty("numPartitions", partitionNumber.toString)
-      }
-
-      val table = sparkSession.read.jdbc(dbInfo.url, dbInfo.sql, props)
-      if (parallel) table.drop(dbInfo.partCol) else table
-    }
     val metrics = Metrics(dbInfo.table, dbInfo.outputPath)(sparkSession)
 
     val avroConverter = SchemaConverter.apply(appConf.getString("schema.registry.url"))
-    val table = metrics.apply(readTable()).transform((tableDS: Dataset[Row]) => avroConverter.transformTable(tableDS, dbInfo.schema, dbInfo.table))
+    val dataFrame = readTable(appConf.getBoolean("parallel.enable"), dbInfo, partitionNumber)(sparkSession)
+    val table = metrics.apply(dataFrame).transform((tableDS: Dataset[Row]) => avroConverter.transformTable(tableDS, dbInfo.schema, dbInfo.table))
 
     import org.apache.spark.sql.functions.current_date
     table
@@ -70,5 +54,33 @@ object DataLoader {
       .format(Option(dbInfo.outputFormat).getOrElse(outputFormat))
       .save(Option(dbInfo.outputPath).getOrElse(outputPath))
     metrics.reportStatistics()
+  }
+
+  def countStatistics(dbInfo: TableInfo, sparkSession: SparkSession, appConf: Config, outputPath: String = "/tmp/dbtofile", outputFormat: String = "parquet"): Unit = {
+    if (!dbInfo.load) {
+      return
+    }
+    val partitionNumber = Option(dbInfo.partition).getOrElse(1)
+    readTable(false, dbInfo, partitionNumber)(sparkSession)
+      .withColumn("sql", lit(dbInfo.sql))
+      .write
+      .format(dbInfo.outputFormat)
+      .save(dbInfo.outputPath)
+  }
+
+  private def readTable(parallel: Boolean, dbInfo: TableInfo, partitionNumber: Int)(implicit sparkSession: SparkSession) = {
+    val props = new Properties()
+    props.setProperty("driver", "oracle.jdbc.driver.OracleDriver")
+    props.setProperty("password", dbInfo.password)
+    props.setProperty("user", dbInfo.user)
+    props.setProperty("url", dbInfo.url)
+    if (parallel) {
+      props.setProperty("partitionColumn", dbInfo.partCol)
+      props.setProperty("lowerBound", dbInfo.lowerB)
+      props.setProperty("upperBound", dbInfo.upperB)
+      props.setProperty("numPartitions", partitionNumber.toString)
+    }
+    val table = sparkSession.read.jdbc(dbInfo.url, dbInfo.sql, props)
+    if (parallel) table.drop(dbInfo.partCol) else table
   }
 }
