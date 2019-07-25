@@ -41,8 +41,9 @@ object DataLoader {
 
     def readTable() = {
       val parallel = appConf.getBoolean("parallel.enable")
+      val jdbcDriver = appConf.getString("driver")
       val props = new Properties()
-      props.setProperty("driver", "oracle.jdbc.driver.OracleDriver")
+      props.setProperty("driver", jdbcDriver)
       props.setProperty("password", dbInfo.password)
       props.setProperty("user", dbInfo.user)
       props.setProperty("url", dbInfo.url)
@@ -53,13 +54,13 @@ object DataLoader {
         props.setProperty("numPartitions", partitionNumber.toString)
       }
 
-      val table = sparkSession.read.jdbc(dbInfo.url, dbInfo.sql, props)
+      val table = sparkSession.read.jdbc(dbInfo.url, dbInfo.table, props)
       if (parallel) table.drop(dbInfo.partCol) else table
     }
+    val enforceSchemaFlag = appConf.getBoolean("schema.enabled")
     val metrics = Metrics(dbInfo.table, dbInfo.outputPath)(sparkSession)
 
-    val avroConverter = SchemaConverter.apply(appConf.getString("schema.registry.url"))
-    val table = metrics.apply(readTable()).transform((tableDS: Dataset[Row]) => avroConverter.transformTable(tableDS, dbInfo.schema, dbInfo.table))
+    val table = metrics.apply(if (!enforceSchemaFlag) readTable() else enforceSchema(readTable(), appConf, dbInfo.schema, dbInfo.table))
 
     import org.apache.spark.sql.functions.current_date
     table
@@ -70,5 +71,10 @@ object DataLoader {
       .format(Option(dbInfo.outputFormat).getOrElse(outputFormat))
       .save(Option(dbInfo.outputPath).getOrElse(outputPath))
     metrics.reportStatistics()
+  }
+
+  def enforceSchema(dataFrame: DataFrame, appConf: Config, schemaName: String, tableName: String): DataFrame = {
+    val avroConverter = SchemaConverter.apply(appConf.getString("schema.registry.url"))
+    dataFrame.transform((tableDS: Dataset[Row]) => avroConverter.transformTable(tableDS, schemaName, tableName))
   }
 }

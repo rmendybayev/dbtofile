@@ -1,12 +1,12 @@
 tables:
   -   &employee
-      url: jdbc:mysql://<mysql.host>:3306/employees
+      url: jdbc:mysql://localhost:3306/mysql
       table: employees
-      user: foouser
-      password: bum
+      user: myuser
+      password: 4myuser
       outputPath: target/employee.parquet
       outputFormat: parquet
-      load: false
+      load: true
   -   &title
       <<: *employee
       table: titles

@@ -1,3 +1,21 @@
+/*
+ *     Licensed to the Apache Software Foundation (ASF) under one or more
+ *     contributor license agreements.  See the NOTICE file distributed with
+ *     this work for additional information regarding copyright ownership.
+ *     The ASF licenses this file to You under the Apache License, Version 2.0
+ *     (the "License"); you may not use this file except in compliance with
+ *     the License.  You may obtain a copy of the License at
+ *
+ *        http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *     Unless required by applicable law or agreed to in writing, software
+ *     distributed under the License is distributed on an "AS IS" BASIS,
+ *     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *     See the License for the specific language governing permissions and
+ *     limitations under the License.
+ *
+ */
+
 package org.dbtofile.load
 
 import java.io.FileInputStream
@@ -27,35 +45,6 @@ class DataLoadSpec extends FunSpec
 
     for (table <- t.tables) {
       DataLoader.loadData(table, spark, appConf)
-      val output = spark.read.parquet(table.outputPath)
-      val input = spark.read.parquet("input/FHOPEHS.parquet")
-      //assert(output.schema === input.schema)
     }
-  }
-
-
-  it("should print all type of schemas") {
-//    spark.read.parquet("output/dbtofile-without").printSchema()
-//    spark.read.parquet("output/dbtofile").filter("OPE_NO = '2570.1700'").show(false)
-//    spark.read.parquet("output/ongoing/siview_mmdb.fhopehs").printSchema()
-//    spark.read.parquet("input/ongoing").printSchema()
-    spark.read.parquet("input/ongoing").filter("OPE_NO = '2570.1700'").show(false)
-  }
-
-  it("should read output from batch-ingestion and compare") {
-    val dbtofile = "output/db/SIVIEW_MMDB.FHOPEHS"
-    val ongoing = "output/ongoing/SIVIEW_MMDB.FHOPEHS"
-
-    val df1 = spark.read.parquet(dbtofile)
-    val df2 = spark.read.parquet(ongoing)
-
-    assert(df1.count() === df2.count())
-    val df11 = df1.filter("OPE_NO = '2570.1700'")
-    val df12 = df2.filter("OPE_NO = '2570.1700'")
-    df11.show(false)
-    df12.show(false)
-    df11.union(df12).distinct().except(df11.intersect(df12)).show(false)
-    assert(df11.intersect(df12).count() > 0)
-    assert(df11.union(df12).distinct().except(df11.intersect(df12)).count() === 0)
   }
 }

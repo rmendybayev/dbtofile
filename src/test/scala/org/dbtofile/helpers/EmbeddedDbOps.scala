@@ -41,22 +41,3 @@ object EmbeddedDbOps {
   }
 
 }
-
-class ScriptRunner(val connection: Connection, val autoCommit: Boolean = true, val stopOnError: Boolean = true) {
-  def executeScript(script: File, delimiter: String = ";") = {
-    val scanner: Scanner = new Scanner(script).useDelimiter(delimiter)
-    while (scanner.hasNext) {
-      val query: String = scanner.next()
-      if (query.trim.nonEmpty) {
-        println(s"${query.take(100)} ${if (query.length > 100) "..."}")
-        Try(connection.createStatement().executeUpdate(query)) match {
-          case Failure(ex) if stopOnError => throw ex
-          case _ => println("OK")
-        }
-      }
-
-    }
-
-
-  }
-}
