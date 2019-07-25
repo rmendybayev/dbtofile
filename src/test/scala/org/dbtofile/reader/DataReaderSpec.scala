@@ -5,7 +5,6 @@ import java.io.FileInputStream
 import org.dbtofile.SparkSessionTestWrapper
 import org.dbtofile.schema.{SchemaConverter, SchemaRegistry}
 import org.scalatest.{BeforeAndAfter, FunSpec}
-import com.databricks.spark.avro.SchemaConverters
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.spark.sql._

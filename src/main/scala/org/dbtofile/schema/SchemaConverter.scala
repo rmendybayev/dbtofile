@@ -17,11 +17,11 @@
  */
 package org.dbtofile.schema
 
-import com.databricks.spark.avro.SchemaConverters
 import org.apache.avro.Schema
 import org.apache.spark.sql.functions.{current_timestamp, lit, monotonically_increasing_id}
 import org.apache.spark.sql.{DataFrame, Dataset, Row}
 import org.apache.spark.sql.types.{DataType, DecimalType, DoubleType, StructType}
+import org.apache.spark.sql.avro.SchemaConverters
 
 class SchemaConverter(schemaRegistry: SchemaRegistry) {
   def convertToSqlSchema(schema: Schema): StructType = {
